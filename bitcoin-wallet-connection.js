@@ -156,3 +156,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
     console.log('Script de connexion de portefeuille initialisé');
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Diagnostic exhaustif des objets globaux
+    function comprehensiveDiagnostic() {
+        console.log('=== DIAGNOSTIC COMPLET DES PORTEFEUILLES ===');
+        
+        // Liste complète des propriétés possibles
+        const walletChecks = [
+            { name: 'Xverse', 
+              checks: [
+                'window.XverseProvider', 
+                'window.XverseProviders', 
+                'window.xverse',
+                'window.bitcoinProvider'
+              ]
+            },
+            { name: 'Unisat', 
+              checks: [
+                'window.unisat', 
+                'window.Bitcoin',
+                'window.bitcoin'
+              ]
+            },
+            { name: 'MagicEden', 
+              checks: [
+                'window.magicEden', 
+                'window.magicEdenWallet',
+                'window.magicEden?.bitcoin'
+              ]
+            },
+            { name: 'OKX', 
+              checks: [
+                'window.okxwallet',
+                'window.okxwallet?.bitcoin',
+                'window.okx',
+                'window.bitcoin?.okx'
+              ]
+            }
+        ];
+
+        // Fonction pour tester exhaustivement chaque portefeuille
+        walletChecks.forEach(wallet => {
+            console.log(`\n🔍 Diagnostic ${wallet.name}:`);
+            wallet.checks.forEach(check => {
+                try {
+                    const parts = check.split('.');
+                    let result = window;
+                    for (let part of parts.slice(1)) {
+                        result = result?.[part];
+                    }
+                    
+                    console.log(`  • ${check}: ${result !== undefined ? '✅ Trouvé' : '❌ Non trouvé'}`, 
+                        result ? result : '');
+                } catch (error) {
+                    console.log(`  • ${check}: ❌ Erreur lors de la vérification`);
+                }
+            });
+        });
+
+        // Liste de tous les objets globaux
+        console.log('\n🌐 Tous les objets globaux contenant "wallet" ou "bitcoin":');
+        Object.keys(window)
+            .filter(key => 
+                key.toLowerCase().includes('wallet') || 
+                key.toLowerCase().includes('bitcoin')
+            )
+            .forEach(key => {
+                console.log(`  • ${key}:`, window[key]);
+            });
+    }
+
+    // Exécution du diagnostic
+    comprehensiveDiagnostic();
+});
