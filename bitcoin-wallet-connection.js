@@ -13,11 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Xverse', 
             connect: async () => {
                 try {
-                    if (!window.XverseProvider) {
+                    const provider = window.XverseProvider || window.bitcoinProvider;
+                    if (!provider) {
                         console.log('Xverse wallet not detected');
                         return null;
                     }
-                    const accounts = await window.XverseProvider.request({
+                    const accounts = await provider.request({
                         method: 'getAccounts'
                     });
                     return accounts[0];
@@ -47,11 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'MagicEden', 
             connect: async () => {
                 try {
-                    if (!window.magicEden) {
+                    const provider = window.magicEden || window.magicEdenWallet;
+                    if (!provider) {
                         console.log('MagicEden wallet not detected');
                         return null;
                     }
-                    const accounts = await window.magicEden.request({
+                    const accounts = await provider.request({
                         method: 'getAccounts'
                     });
                     return accounts[0];
@@ -65,11 +67,12 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'OKX', 
             connect: async () => {
                 try {
-                    if (!window.okxwallet?.bitcoin) {
+                    const provider = window.okxwallet?.bitcoin || window.bitcoin?.okx;
+                    if (!provider) {
                         console.log('OKX wallet not detected');
                         return null;
                     }
-                    const accounts = await window.okxwallet.bitcoin.requestAccounts();
+                    const accounts = await provider.requestAccounts();
                     return accounts[0];
                 } catch (error) {
                     console.error('OKX connection error:', error);
@@ -78,18 +81,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     ];
+
     // Fonction de débogage pour vérifier les objets globaux
-                    function debugWalletAvailability() {
-                        console.log('Débogage des portefeuilles Bitcoin :');
-                        console.log('Xverse:', window.XverseProvider ? 'Disponible' : 'Non détecté');
-                        console.log('Unisat:', window.unisat ? 'Disponible' : 'Non détecté');
-                        console.log('MagicEden:', window.magicEden ? 'Disponible' : 'Non détecté');
-                        console.log('OKX:', window.okxwallet?.bitcoin ? 'Disponible' : 'Non détecté');                
+    function debugWalletAvailability() {
+        console.log('Débogage des portefeuilles Bitcoin :');
+        console.log('Xverse:', window.XverseProvider || window.bitcoinProvider ? 'Disponible' : 'Non détecté');
+        console.log('Unisat:', window.unisat ? 'Disponible' : 'Non détecté');
+        console.log('MagicEden:', window.magicEden || window.magicEdenWallet ? 'Disponible' : 'Non détecté');
+        console.log('OKX:', window.okxwallet?.bitcoin || window.bitcoin?.okx ? 'Disponible' : 'Non détecté');
     }
 
-    // Ajoutez cette ligne à votre script existant
-    debugWalletAvailability();
-});
+    // Raccourcir l'adresse
+    function shortenAddress(address) {
+        return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+    }
+
     // Créer le popup de sélection de portefeuille
     function createWalletPopup() {
         // Vérifier si le popup existe déjà
@@ -146,87 +152,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Raccourcir l'adresse
-    function shortenAddress(address) {
-        return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-    }
-
     // Ajout de l'écouteur d'événements sur le bouton de connexion
     connectButton.addEventListener('click', createWalletPopup);
 
+    // Exécution du débogage
+    debugWalletAvailability();
+
     console.log('Script de connexion de portefeuille initialisé');
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Diagnostic exhaustif des objets globaux
-    function comprehensiveDiagnostic() {
-        console.log('=== DIAGNOSTIC COMPLET DES PORTEFEUILLES ===');
-        
-        // Liste complète des propriétés possibles
-        const walletChecks = [
-            { name: 'Xverse', 
-              checks: [
-                'window.XverseProvider', 
-                'window.XverseProviders', 
-                'window.xverse',
-                'window.bitcoinProvider'
-              ]
-            },
-            { name: 'Unisat', 
-              checks: [
-                'window.unisat', 
-                'window.Bitcoin',
-                'window.bitcoin'
-              ]
-            },
-            { name: 'MagicEden', 
-              checks: [
-                'window.magicEden', 
-                'window.magicEdenWallet',
-                'window.magicEden?.bitcoin'
-              ]
-            },
-            { name: 'OKX', 
-              checks: [
-                'window.okxwallet',
-                'window.okxwallet?.bitcoin',
-                'window.okx',
-                'window.bitcoin?.okx'
-              ]
-            }
-        ];
-
-        // Fonction pour tester exhaustivement chaque portefeuille
-        walletChecks.forEach(wallet => {
-            console.log(`\n🔍 Diagnostic ${wallet.name}:`);
-            wallet.checks.forEach(check => {
-                try {
-                    const parts = check.split('.');
-                    let result = window;
-                    for (let part of parts.slice(1)) {
-                        result = result?.[part];
-                    }
-                    
-                    console.log(`  • ${check}: ${result !== undefined ? '✅ Trouvé' : '❌ Non trouvé'}`, 
-                        result ? result : '');
-                } catch (error) {
-                    console.log(`  • ${check}: ❌ Erreur lors de la vérification`);
-                }
-            });
-        });
-
-        // Liste de tous les objets globaux
-        console.log('\n🌐 Tous les objets globaux contenant "wallet" ou "bitcoin":');
-        Object.keys(window)
-            .filter(key => 
-                key.toLowerCase().includes('wallet') || 
-                key.toLowerCase().includes('bitcoin')
-            )
-            .forEach(key => {
-                console.log(`  • ${key}:`, window[key]);
-            });
-    }
-
-    // Exécution du diagnostic
-    comprehensiveDiagnostic();
 });
