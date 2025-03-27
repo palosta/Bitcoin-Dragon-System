@@ -1,35 +1,56 @@
-function initSatsConnect() {
-    const connectButton = document.getElementById("connect-wallet");
-    const walletAddressElement = document.getElementById("wallet-address");
-    const verificationResultElement = document.getElementById("verification-result");
+document.addEventListener("DOMContentLoaded", async function () {
+    console.log("Page chargée !");
+    
+    // Vérifier si SatsConnect est bien chargé
+    if (typeof SatsConnect === "undefined") {
+        console.error("SatsConnect n'est pas disponible !");
+        return;
+    }
 
-    // Ajoute un écouteur d'événement au bouton pour connecter le wallet
+    // Sélectionner le bouton
+    const connectButton = document.getElementById("connectWallet");
+
     connectButton.addEventListener("click", async () => {
         try {
-            // Vérifie si l'objet SatsConnect est défini
-            if (typeof SatsConnect !== "undefined") {
-                // Initialisation de la connexion avec Sats Connect
-                const satsConnect = new SatsConnect();
+            console.log("Tentative de connexion au wallet...");
 
-                // Connexion au wallet
-                const wallet = await satsConnect.connect();
-                
-                if (wallet) {
-                    // Affiche l'adresse du wallet dans l'élément correspondant
-                    walletAddressElement.textContent = `Wallet Address: ${wallet.address}`;
-                    
-                    // Vérification de la possession d'un OG Egg
-                    await verifyOGEgg(wallet.address, verificationResultElement);
-                } else {
-                    verificationResultElement.textContent = "No wallet connected.";
+            const response = await SatsConnect.connect({
+                payload: { purposes: ["ordinals", "payment"], message: "Connect to Bitcoin Dragon System" },
+                onFinish: (response) => {
+                    console.log("Connexion réussie :", response);
+                    const userAddress = response.address;
+                    checkOGEggs(userAddress);
+                },
+                onCancel: () => {
+                    console.warn("Connexion annulée !");
                 }
-            } else {
-                verificationResultElement.textContent = "SatsConnect is not loaded correctly.";
-            }
+            });
+
         } catch (error) {
-            // En cas d'erreur, affiche un message d'erreur
-            console.error("Error connecting to wallet:", error);
-            verificationResultElement.textContent = "Error connecting to the wallet.";
+            console.error("Erreur lors de la connexion :", error);
         }
     });
-}
+
+    async function checkOGEggs(address) {
+        console.log("Vérification des OG Eggs pour :", address);
+        
+        const collectionSlug = "og-eggs";  // Remplace par le bon slug
+        const apiUrl = `https://api.magiceden.io/v2/ordinals/tokens/${address}`;
+
+        try {
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            const ownsOGEgg = data.some(token => token.collection === collectionSlug);
+
+            if (ownsOGEgg) {
+                alert("Félicitations, vous possédez un OG Egg !");
+            } else {
+                alert("Désolé, vous ne possédez pas de OG Egg.");
+            }
+
+        } catch (error) {
+            console.error("Erreur lors de la vérification :", error);
+        }
+    }
+});
