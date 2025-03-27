@@ -18,19 +18,17 @@
     <meta name="twitter:description" content="Dragons on Bitcoin">
     <meta name="twitter:image" content="https://raw.githubusercontent.com/palosta/Bitcoin-Dragon-System/main/btcdragonlogo.png">
 
-    <script src="https://cdn.sats.connect/sats-connect.js" onload="initSatsConnect()"></script>
-    
+    <!-- Charger SatsConnect avant ton script -->
+    <script src="https://cdn.sats.connect/sats-connect.js"></script>
 </head>
 <body>
     <div class="container">
         <img src="coming.png" alt="coming soon">
-         <!-- Bouton pour se connecter au wallet -->
-        <button id="connect-wallet">Se connecter avec Xverse</button>
-        <!-- Zone d'affichage des informations -->
+        <button id="connect-wallet">Connect Wallet</button>
         <p id="wallet-address"></p>
         <p id="verification-result"></p>
     </div>
-
-    <script defer src="script.js"></script>
+    <!-- Ton script personnalisé -->
+    <script src="script.js"></script>
 </body>
 </html>
