@@ -16,3 +16,30 @@ body {
     max-width: 100%;
     height: auto;
 }
+
+/* Style pour le bouton de connexion */
+#connect-wallet {
+    display: block;
+    margin: 20px auto; /* Centrer le bouton */
+    padding: 10px 20px;
+    font-size: 18px;
+    background-color: #f7931a; /* Couleur Bitcoin */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+}
+
+/* Changer la couleur au survol */
+#connect-wallet:hover {
+    background-color: #d67d0f;
+}
+
+/* Style pour le texte affiché (adresse du wallet et résultat de vérification) */
+#wallet-address, #verification-result {
+    text-align: center;
+    font-size: 16px;
+    margin-top: 10px;
+    color: #333;
+}
