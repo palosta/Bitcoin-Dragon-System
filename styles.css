@@ -18,7 +18,7 @@ body {
 }
 
 /* Style pour le bouton de connexion */
-#connect-wallet {
+#connect-wallet-btn {
     display: block;
     margin: 20px auto; /* Centrer le bouton */
     padding: 10px 20px;
@@ -32,14 +32,7 @@ body {
 }
 
 /* Changer la couleur au survol */
-#connect-wallet:hover {
+#connect-wallet-btn:hover {
     background-color: #d67d0f;
 }
 
-/* Style pour le texte affiché (adresse du wallet et résultat de vérification) */
-#wallet-address, #verification-result {
-    text-align: center;
-    font-size: 16px;
-    margin-top: 10px;
-    color: #333;
-}
