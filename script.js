@@ -1,78 +1,68 @@
-document.getElementById("connect-wallet").addEventListener("click", async () => {
-    console.log("Attempting to connect wallet..."); // Log de débogage
-
+// Fonction d'initialisation pour Sats Connect
 function initSatsConnect() {
     const connectButton = document.getElementById("connect-wallet");
     const walletAddressElement = document.getElementById("wallet-address");
     const verificationResultElement = document.getElementById("verification-result");
 
+    // Ajouter un écouteur d'événement au bouton pour se connecter au wallet
     connectButton.addEventListener("click", async () => {
         try {
-            // Initialise la connexion avec Sats Connect
-            const satsConnect = new SatsConnect();
+            // Vérifie si l'objet SatsConnect est défini
+            if (typeof SatsConnect !== "undefined") {
+                // Initialisation de la connexion avec Sats Connect
+                const satsConnect = new SatsConnect();
 
-            // Connexion au wallet
-            const wallet = await satsConnect.connect();
-            
-            if (wallet) {
-                // Affiche l'adresse du wallet
-                walletAddressElement.textContent = `Wallet Address: ${wallet.address}`;
+                // Connexion au wallet
+                const wallet = await satsConnect.connect();
                 
-                // Vérifier l'ordinal ou effectuer d'autres actions ici
-                verificationResultElement.textContent = "Wallet connected successfully!";
+                if (wallet) {
+                    // Affiche l'adresse du wallet dans l'élément correspondant
+                    walletAddressElement.textContent = `Wallet Address: ${wallet.address}`;
+                    
+                    // Vérification de la possession d'un OG Egg
+                    await verifyOGEgg(wallet.address, verificationResultElement);
+                } else {
+                    verificationResultElement.textContent = "No wallet connected.";
+                }
             } else {
-                verificationResultElement.textContent = "No wallet connected.";
+                verificationResultElement.textContent = "SatsConnect is not loaded correctly.";
             }
         } catch (error) {
+            // En cas d'erreur, affiche un message d'erreur
             console.error("Error connecting to wallet:", error);
             verificationResultElement.textContent = "Error connecting to the wallet.";
         }
     });
 }
 
-    
-    // Connexion via Sats Connect (Xverse)
+// Fonction pour vérifier si l'adresse du wallet possède un OG Egg
+async function verifyOGEgg(walletAddress, resultElement) {
     try {
-        const wallet = await SatsConnect.requestAccount();
+        // Remplace cet URL par l'API appropriée de Magic Eden ou de ton API pour vérifier les ordinals de la collection OG Eggs
+        const apiUrl = `https://api.magiceden.io/v2/wallets/${walletAddress}/tokens`; // Exemple d'endpoint API
 
-        if (wallet) {
-            const address = wallet.address;  // Récupère l'adresse Bitcoin
-            console.log(`Connected wallet address: ${address}`); // Log de débogage
-            document.getElementById("wallet-address").innerText = `Connected wallet: ${address}`;
-
-            // Vérification de l'Ordinal
-            checkOrdinalOwnership(address);
-        } else {
-            alert("No wallet connected.");
-        }
-    } catch (error) {
-        console.error("Error connecting to wallet", error);
-        alert("Error connecting to the wallet.");
-    }
-});
-
-async function checkOrdinalOwnership(address) {
-    console.log(`Checking Ordinal ownership for address: ${address}`); // Log de débogage
-    const apiUrl = `https://api-mainnet.magiceden.dev/v2/wallets/${address}/ordinals`;
-
-    try {
         const response = await fetch(apiUrl);
         const data = await response.json();
 
-        if (!data || data.length === 0) {
-            console.log("No Ordinals found."); // Log de débogage
-            document.getElementById("verification-result").innerText = "❌ No Ordinals found.";
-            return;
+        // Vérification si l'OG Egg est présent dans les tokens
+        const ogEggFound = data.tokens.some(token => token.collection === "OG Eggs"); // Assure-toi que la collection est bien nommée "OG Eggs"
+
+        if (ogEggFound) {
+            resultElement.textContent = "You own an OG Egg!";
+        } else {
+            resultElement.textContent = "You don't own an OG Egg.";
         }
-
-        // Remplace "OG Eggs" par l'ID réel de ta collection
-        const hasEgg = data.some(ordinal => ordinal.collection === "OG Eggs");
-
-        document.getElementById("verification-result").innerText = hasEgg 
-            ? "✅ You own an OG Egg!" 
-            : "❌ You don't own an OG Egg.";
     } catch (error) {
-        console.error("Magic Eden API error:", error);
-        document.getElementById("verification-result").innerText = "⚠️ Verification error.";
+        console.error("Error checking OG Egg:", error);
+        resultElement.textContent = "Error verifying OG Egg.";
     }
 }
+
+// Attendre que le script Sats Connect soit chargé avant d'initialiser la connexion
+window.onload = function() {
+    if (typeof SatsConnect !== "undefined") {
+        initSatsConnect();  // Appel de la fonction lorsque SatsConnect est disponible
+    } else {
+        console.log("SatsConnect is not loaded correctly.");
+    }
+};
