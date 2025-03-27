@@ -1,24 +1,28 @@
 document.getElementById("connect-wallet").addEventListener("click", async () => {
-    // Connect to Xverse wallet
-    try {
-        const wallet = await window.xverse.request({ method: 'getAccounts' });
+    console.log("Attempting to connect wallet..."); // Log de débogage
 
-        if (wallet && wallet.length > 0) {
-            const address = wallet[0];  // First Xverse address
+    // Connexion via Sats Connect (Xverse)
+    try {
+        const wallet = await SatsConnect.requestAccount();
+
+        if (wallet) {
+            const address = wallet.address;  // Récupère l'adresse Bitcoin
+            console.log(`Connected wallet address: ${address}`); // Log de débogage
             document.getElementById("wallet-address").innerText = `Connected wallet: ${address}`;
-            
-            // Check for Ordinal ownership
+
+            // Vérification de l'Ordinal
             checkOrdinalOwnership(address);
         } else {
             alert("No wallet connected.");
         }
     } catch (error) {
-        console.error("Error connecting to Xverse", error);
+        console.error("Error connecting to wallet", error);
         alert("Error connecting to the wallet.");
     }
 });
 
 async function checkOrdinalOwnership(address) {
+    console.log(`Checking Ordinal ownership for address: ${address}`); // Log de débogage
     const apiUrl = `https://api-mainnet.magiceden.dev/v2/wallets/${address}/ordinals`;
 
     try {
@@ -26,11 +30,12 @@ async function checkOrdinalOwnership(address) {
         const data = await response.json();
 
         if (!data || data.length === 0) {
+            console.log("No Ordinals found."); // Log de débogage
             document.getElementById("verification-result").innerText = "❌ No Ordinals found.";
             return;
         }
 
-        // Replace "OG Eggs" with your actual collection ID
+        // Remplace "OG Eggs" par l'ID réel de ta collection
         const hasEgg = data.some(ordinal => ordinal.collection === "OG Eggs");
 
         document.getElementById("verification-result").innerText = hasEgg 
