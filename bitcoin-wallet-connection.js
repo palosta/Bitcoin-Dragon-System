@@ -78,7 +78,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     ];
+    // Fonction de débogage pour vérifier les objets globaux
+                    function debugWalletAvailability() {
+                        console.log('Débogage des portefeuilles Bitcoin :');
+                        console.log('Xverse:', window.XverseProvider ? 'Disponible' : 'Non détecté');
+                        console.log('Unisat:', window.unisat ? 'Disponible' : 'Non détecté');
+                        console.log('MagicEden:', window.magicEden ? 'Disponible' : 'Non détecté');
+                        console.log('OKX:', window.okxwallet?.bitcoin ? 'Disponible' : 'Non détecté');                
+    }
 
+    // Ajoutez cette ligne à votre script existant
+    debugWalletAvailability();
+});
     // Créer le popup de sélection de portefeuille
     function createWalletPopup() {
         // Vérifier si le popup existe déjà
