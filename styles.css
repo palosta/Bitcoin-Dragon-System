@@ -17,22 +17,60 @@ body {
     height: auto;
 }
 
-/* Style pour le bouton de connexion */
-#connect-wallet-btn {
-    display: block;
-    margin: 20px auto; /* Centrer le bouton */
-    padding: 10px 20px;
-    font-size: 18px;
-    background-color: #f7931a; /* Couleur Bitcoin */
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    text-align: center;
-}
+const styles = `
+    .wallet-popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
 
-/* Changer la couleur au survol */
-#connect-wallet-btn:hover {
-    background-color: #d67d0f;
-}
+    .wallet-popup-content {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        width: 300px;
+        text-align: center;
+    }
 
+    .wallet-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 20px 0;
+    }
+
+    .wallet-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .wallet-option img {
+        width: 30px;
+        height: 30px;
+    }
+
+    #connected-wallet-display {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        border: 1px solid #ddd;
+        padding: 10px;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+`;
