@@ -1,6 +1,36 @@
 document.getElementById("connect-wallet").addEventListener("click", async () => {
     console.log("Attempting to connect wallet..."); // Log de débogage
 
+function initSatsConnect() {
+    const connectButton = document.getElementById("connect-wallet");
+    const walletAddressElement = document.getElementById("wallet-address");
+    const verificationResultElement = document.getElementById("verification-result");
+
+    connectButton.addEventListener("click", async () => {
+        try {
+            // Initialise la connexion avec Sats Connect
+            const satsConnect = new SatsConnect();
+
+            // Connexion au wallet
+            const wallet = await satsConnect.connect();
+            
+            if (wallet) {
+                // Affiche l'adresse du wallet
+                walletAddressElement.textContent = `Wallet Address: ${wallet.address}`;
+                
+                // Vérifier l'ordinal ou effectuer d'autres actions ici
+                verificationResultElement.textContent = "Wallet connected successfully!";
+            } else {
+                verificationResultElement.textContent = "No wallet connected.";
+            }
+        } catch (error) {
+            console.error("Error connecting to wallet:", error);
+            verificationResultElement.textContent = "Error connecting to the wallet.";
+        }
+    });
+}
+
+    
     // Connexion via Sats Connect (Xverse)
     try {
         const wallet = await SatsConnect.requestAccount();
