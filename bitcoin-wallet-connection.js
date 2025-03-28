@@ -1,16 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
     const connectButton = document.getElementById('connect-wallet-btn');
     const walletAddressDisplay = document.getElementById('wallet-address');
+    const walletModal = document.getElementById('wallet-modal');
+    const closeModalButton = document.querySelector('.close-modal');
+    const walletOptionsContainer = document.querySelector('.wallet-options');
 
     if (!connectButton) {
         console.error('Bouton de connexion non trouvé');
         return;
     }
 
-    // Configuration des portefeuilles
+    // Configuration des portefeuilles avec leurs icônes
     const wallets = [
         { 
-            name: 'Xverse', 
+            name: 'Xverse',
+            icon: "assets/xverse.svg",
+            iconType: "svg",
             connect: async () => {
                 try {
                     const provider = window.XverseProvider || window.bitcoinProvider;
@@ -29,7 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         { 
-            name: 'Unisat', 
+            name: 'Unisat',
+            icon: "assets/unisat.png",
+            iconType: "png",
             connect: async () => {
                 try {
                     if (!window.unisat) {
@@ -45,7 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         { 
-            name: 'MagicEden', 
+            name: 'Magic Eden',
+            icon: "assets/magic-eden.png",
+            iconType: "png",
             connect: async () => {
                 try {
                     const provider = window.magicEden || window.magicEdenWallet;
@@ -64,7 +73,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         { 
-            name: 'OKX', 
+            name: 'OKX',
+            icon: "assets/okx.png",
+            iconType: "png",
             connect: async () => {
                 try {
                     const provider = window.okxwallet?.bitcoin || window.bitcoin?.okx;
@@ -79,6 +90,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     return null;
                 }
             }
+        },
+        { 
+            name: 'Leather',
+            icon: "assets/leather.png",
+            iconType: "png",
+            connect: async () => {
+                try {
+                    const provider = window.leather || window.leatherProvider;
+                    if (!provider) {
+                        console.log('Leather wallet not detected');
+                        return null;
+                    }
+                    const accounts = await provider.request({
+                        method: 'getAccounts'
+                    });
+                    return accounts[0];
+                } catch (error) {
+                    console.error('Leather connection error:', error);
+                    return null;
+                }
+            }
         }
     ];
 
@@ -89,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Unisat:', window.unisat ? 'Disponible' : 'Non détecté');
         console.log('MagicEden:', window.magicEden || window.magicEdenWallet ? 'Disponible' : 'Non détecté');
         console.log('OKX:', window.okxwallet?.bitcoin || window.bitcoin?.okx ? 'Disponible' : 'Non détecté');
+        console.log('Leather:', window.leather || window.leatherProvider ? 'Disponible' : 'Non détecté');
     }
 
     // Raccourcir l'adresse
@@ -96,34 +129,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
     }
 
-    // Créer le popup de sélection de portefeuille
-    function createWalletPopup() {
-        // Vérifier si le popup existe déjà
-        if (document.getElementById('wallet-popup')) return;
-
-        const popup = document.createElement('div');
-        popup.id = 'wallet-popup';
-        popup.innerHTML = `
-            <div class="wallet-popup-overlay">
-                <div class="wallet-popup-content">
-                    <h2>Sélectionnez un portefeuille</h2>
-                    <div class="wallet-list">
-                        ${wallets.map((wallet, index) => `
-                            <button class="wallet-option" data-wallet="${index}">
-                                ${wallet.name}
-                            </button>
-                        `).join('')}
-                    </div>
-                    <button id="close-popup">Fermer</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(popup);
-
-        // Gestion des événements de connexion
-        popup.querySelectorAll('.wallet-option').forEach(button => {
-            button.addEventListener('click', async () => {
-                const walletIndex = button.getAttribute('data-wallet');
+    // Initialiser la modal avec les options de portefeuille
+    function initWalletModal() {
+        if (!walletOptionsContainer) return;
+        
+        // Vider le conteneur
+        walletOptionsContainer.innerHTML = '';
+        
+        // Ajouter chaque option de portefeuille
+        wallets.forEach((wallet, index) => {
+            const optionElement = document.createElement('div');
+            optionElement.className = 'wallet-option';
+            optionElement.setAttribute('data-wallet', index);
+            optionElement.innerHTML = `
+                <span class="wallet-option-name">${wallet.name}</span>
+                <img src="${wallet.icon}" alt="${wallet.name}" class="wallet-option-icon">
+            `;
+            walletOptionsContainer.appendChild(optionElement);
+        });
+        
+        // Ajouter les écouteurs d'événements
+        walletOptionsContainer.querySelectorAll('.wallet-option').forEach(option => {
+            option.addEventListener('click', async () => {
+                const walletIndex = option.getAttribute('data-wallet');
                 const wallet = wallets[walletIndex];
                 
                 try {
@@ -132,7 +160,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (walletAddressDisplay) {
                             walletAddressDisplay.textContent = `Connecté avec ${wallet.name}: ${shortenAddress(address)}`;
                         }
-                        document.body.removeChild(popup);
+                        // Changer l'apparence du bouton
+                        connectButton.textContent = 'Connecté';
+                        connectButton.classList.add('connected');
+                        closeWalletModal();
                     } else {
                         alert('Échec de la connexion. Vérifiez que le portefeuille est installé.');
                     }
@@ -142,20 +173,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
+    }
 
-        // Fermeture du popup
-        const closeButton = document.getElementById('close-popup');
-        if (closeButton) {
-            closeButton.addEventListener('click', () => {
-                document.body.removeChild(popup);
+    // Ouvrir la modal de portefeuille
+    function openWalletModal() {
+        if (walletModal) {
+            walletModal.style.display = 'flex';
+        }
+    }
+
+    // Fermer la modal de portefeuille
+    function closeWalletModal() {
+        if (walletModal) {
+            walletModal.style.display = 'none';
+        }
+    }
+
+    // Initialisation des écouteurs d'événements
+    function initEventListeners() {
+        // Ouvrir la modal au clic sur le bouton de connexion
+        connectButton.addEventListener('click', openWalletModal);
+        
+        // Fermer la modal au clic sur le bouton de fermeture
+        if (closeModalButton) {
+            closeModalButton.addEventListener('click', closeWalletModal);
+        }
+        
+        // Fermer la modal au clic à l'extérieur
+        if (walletModal) {
+            walletModal.addEventListener('click', (event) => {
+                if (event.target === walletModal) {
+                    closeWalletModal();
+                }
             });
         }
     }
 
-    // Ajout de l'écouteur d'événements sur le bouton de connexion
-    connectButton.addEventListener('click', createWalletPopup);
-
-    // Exécution du débogage
+    // Initialisation
+    initWalletModal();
+    initEventListeners();
     debugWalletAvailability();
 
     console.log('Script de connexion de portefeuille initialisé');
