@@ -12,16 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Configuration des portefeuilles avec leurs icônes
     const wallets = [
-       {
+        { 
             name: 'Xverse',
-            icon: "assets/xverse.png",
-            iconType: "png",
+            icon: "assets/xverse.svg",
+            iconType: "svg",
             connect: async () => {
                 try {
                     // Vérifiez plusieurs façons d'accéder à Xverse
                     const provider = window.XverseProviders?.BitcoinProvider || 
-                                     window.XverseProvider || 
-                                     window.bitcoinProvider;
+                                    window.XverseProvider || 
+                                    window.bitcoinProvider;
                     
                     if (!provider) {
                         console.log('Xverse wallet not detected. Available window objects:', Object.keys(window).filter(k => k.includes('Xverse')));
@@ -67,47 +67,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         },
-        {
-    name: 'Magic Eden',
-    icon: "assets/magic-eden.png",
-    iconType: "png",
-    connect: async () => {
-        try {
-            // Vérifier différentes façons dont Magic Eden peut s'exposer
-            const provider = window.magicEden || 
-                             window.magicEdenWallet || 
-                             window.bitcoin?.magicEden ||
-                             window.MagicEden;
-            
-            if (!provider) {
-                console.log('Magic Eden wallet not detected. Available window objects:', 
-                    Object.keys(window).filter(k => k.toLowerCase().includes('magic')));
-                return null;
+        { 
+            name: 'Magic Eden',
+            icon: "assets/magic-eden.png",
+            iconType: "png",
+            connect: async () => {
+                try {
+                    // Vérifier différentes façons dont Magic Eden peut s'exposer
+                    const provider = window.magicEden || 
+                                    window.magicEdenWallet || 
+                                    window.bitcoin?.magicEden ||
+                                    window.MagicEden;
+                    
+                    if (!provider) {
+                        console.log('Magic Eden wallet not detected. Available window objects:', 
+                            Object.keys(window).filter(k => k.toLowerCase().includes('magic')));
+                        return null;
+                    }
+                    
+                    console.log('Magic Eden provider found:', provider);
+                    
+                    // Essayer différentes méthodes de connexion
+                    let accounts;
+                    if (provider.getAccounts) {
+                        accounts = await provider.getAccounts();
+                    } else if (provider.request) {
+                        accounts = await provider.request({ method: 'getAccounts' });
+                    } else if (provider.requestAccounts) {
+                        accounts = await provider.requestAccounts();
+                    } else if (provider.connect) {
+                        await provider.connect();
+                        accounts = await provider.getAddress ? [await provider.getAddress()] : [];
+                    }
+                    
+                    console.log('Magic Eden accounts:', accounts);
+                    return accounts && accounts.length > 0 ? accounts[0] : null;
+                } catch (error) {
+                    console.error('Magic Eden connection error:', error);
+                    return null;
+                }
             }
-            
-            console.log('Magic Eden provider found:', provider);
-            
-            // Essayer différentes méthodes de connexion
-            let accounts;
-            if (provider.getAccounts) {
-                accounts = await provider.getAccounts();
-            } else if (provider.request) {
-                accounts = await provider.request({ method: 'getAccounts' });
-            } else if (provider.requestAccounts) {
-                accounts = await provider.requestAccounts();
-            } else if (provider.connect) {
-                await provider.connect();
-                accounts = await provider.getAddress ? [await provider.getAddress()] : [];
-            }
-            
-            console.log('Magic Eden accounts:', accounts);
-            return accounts && accounts.length > 0 ? accounts[0] : null;
-        } catch (error) {
-            console.error('Magic Eden connection error:', error);
-            return null;
-        }
-    }
-},
+        },
         { 
             name: 'OKX',
             icon: "assets/okx.png",
@@ -127,59 +127,86 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         },
-        {
-    name: 'Leather',
-    icon: "assets/leather.png",
-    iconType: "png",
-    connect: async () => {
-        try {
-            // Vérifier différentes façons dont Leather peut s'exposer
-            const provider = window.leather || 
-                             window.leatherProvider || 
-                             window.StacksProvider ||
-                             window.bitcoin?.leather ||
-                             window.stacks;
-            
-            if (!provider) {
-                console.log('Leather wallet not detected. Available window objects:', 
-                    Object.keys(window).filter(k => k.toLowerCase().includes('leather') || 
-                                                k.toLowerCase().includes('stacks')));
-                return null;
+        { 
+            name: 'Leather',
+            icon: "assets/leather.png",
+            iconType: "png",
+            connect: async () => {
+                try {
+                    // Vérifier différentes façons dont Leather peut s'exposer
+                    const provider = window.leather || 
+                                    window.leatherProvider || 
+                                    window.StacksProvider ||
+                                    window.bitcoin?.leather ||
+                                    window.stacks;
+                    
+                    if (!provider) {
+                        console.log('Leather wallet not detected. Available window objects:', 
+                            Object.keys(window).filter(k => k.toLowerCase().includes('leather') || 
+                                                        k.toLowerCase().includes('stacks')));
+                        return null;
+                    }
+                    
+                    console.log('Leather provider found:', provider);
+                    
+                    // Essayer différentes méthodes de connexion
+                    let accounts;
+                    if (provider.getAccounts) {
+                        accounts = await provider.getAccounts();
+                    } else if (provider.request) {
+                        accounts = await provider.request({ method: 'getAccounts' });
+                    } else if (provider.requestAccounts) {
+                        accounts = await provider.requestAccounts();
+                    } else if (provider.connect) {
+                        await provider.connect();
+                        accounts = await provider.getAddress ? [await provider.getAddress()] : [];
+                    }
+                    
+                    console.log('Leather accounts:', accounts);
+                    return accounts && accounts.length > 0 ? accounts[0] : null;
+                } catch (error) {
+                    console.error('Leather connection error:', error);
+                    return null;
+                }
             }
-            
-            console.log('Leather provider found:', provider);
-            
-            // Essayer différentes méthodes de connexion
-            let accounts;
-            if (provider.getAccounts) {
-                accounts = await provider.getAccounts();
-            } else if (provider.request) {
-                accounts = await provider.request({ method: 'getAccounts' });
-            } else if (provider.requestAccounts) {
-                accounts = await provider.requestAccounts();
-            } else if (provider.connect) {
-                await provider.connect();
-                accounts = await provider.getAddress ? [await provider.getAddress()] : [];
-            }
-            
-            console.log('Leather accounts:', accounts);
-            return accounts && accounts.length > 0 ? accounts[0] : null;
-        } catch (error) {
-            console.error('Leather connection error:', error);
-            return null;
         }
-    }
-}
     ];
 
     // Fonction de débogage pour vérifier les objets globaux
     function debugWalletAvailability() {
         console.log('Débogage des portefeuilles Bitcoin :');
-        console.log('Xverse:', window.XverseProvider || window.bitcoinProvider ? 'Disponible' : 'Non détecté');
-        console.log('Unisat:', window.unisat ? 'Disponible' : 'Non détecté');
-        console.log('MagicEden:', window.magicEden || window.magicEdenWallet ? 'Disponible' : 'Non détecté');
-        console.log('OKX:', window.okxwallet?.bitcoin || window.bitcoin?.okx ? 'Disponible' : 'Non détecté');
-        console.log('Leather:', window.leather || window.leatherProvider ? 'Disponible' : 'Non détecté');
+        
+        // Xverse
+        console.log('Xverse présence:', window.XverseProvider ? 'XverseProvider trouvé' : 'XverseProvider non trouvé');
+        console.log('Bitcoin provider:', window.bitcoinProvider ? 'bitcoinProvider trouvé' : 'bitcoinProvider non trouvé');
+        
+        // Unisat
+        console.log('Unisat présence:', window.unisat ? 'Trouvé' : 'Non trouvé');
+        
+        // Magic Eden
+        console.log('Magic Eden présence:', window.magicEden ? 'magicEden trouvé' : 'magicEden non trouvé');
+        console.log('Magic Eden wallet:', window.magicEdenWallet ? 'magicEdenWallet trouvé' : 'magicEdenWallet non trouvé');
+        
+        // OKX
+        console.log('OKX présence (bitcoin):', window.okxwallet?.bitcoin ? 'okxwallet.bitcoin trouvé' : 'okxwallet.bitcoin non trouvé');
+        console.log('OKX présence (alt):', window.bitcoin?.okx ? 'bitcoin.okx trouvé' : 'bitcoin.okx non trouvé');
+        
+        // Leather
+        console.log('Leather présence:', window.leather ? 'leather trouvé' : 'leather non trouvé');
+        console.log('Leather provider:', window.leatherProvider ? 'leatherProvider trouvé' : 'leatherProvider non trouvé');
+        
+        // Log tous les objets window qui contiennent "bitcoin"
+        console.log('Tous les objets bitcoin possibles:');
+        Object.keys(window).filter(key => 
+            key.toLowerCase().includes('bitcoin') || 
+            key.toLowerCase().includes('wallet') || 
+            key.toLowerCase().includes('xverse') || 
+            key.toLowerCase().includes('magic') ||
+            key.toLowerCase().includes('leather') ||
+            key.toLowerCase().includes('stacks')
+        ).forEach(key => {
+            console.log(`- ${key} trouvé`);
+        });
     }
 
     // Raccourcir l'adresse
