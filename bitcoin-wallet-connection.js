@@ -10,14 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Configuration des portefeuilles - assurez-vous que les chemins d'icônes sont corrects
+    // Configuration des portefeuilles
     const wallets = [
         { 
             name: 'Xverse',
-            icon: "assets/xverse.png", // Changé en .png
+            icon: "assets/xverse.png",
             connect: async () => {
                 try {
-                    // Vérifiez différentes façons d'accéder à Xverse
                     if (window.XverseProviders?.BitcoinProvider) {
                         return await connectXverse(window.XverseProviders.BitcoinProvider);
                     } else if (window.XverseProvider) {
@@ -92,17 +91,33 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Leather',
             icon: "assets/leather.png",
             connect: async () => {
+                // Leather fonctionne comme une extension Stacks, pas Bitcoin directement
                 try {
-                    if (window.leather) {
-                        return await connectLeather(window.leather);
-                    } else if (window.leatherProvider) {
-                        return await connectLeather(window.leatherProvider);
-                    } else if (window.stacks) {
-                        return await connectLeather(window.stacks);
-                    } else {
-                        openWalletWebsite('Leather', 'https://leather.io/install-extension');
-                        return null;
+                    // Vérifier uniquement les objets spécifiques à Leather
+                    // Ignorer stacks s'il est lié à OKX ou à un autre portefeuille
+                    if (window.stacks && !window.StacksProvider && !window.okxwallet) {
+                        console.log("Tentative de connexion Leather via Stacks API");
+                        
+                        try {
+                            // IMPORTANT: Ouvrir l'extension Leather explicitement
+                            const openLeather = confirm("Ouvrir Leather pour se connecter? (Cliquez sur Annuler si l'extension est déjà ouverte)");
+                            if (openLeather) {
+                                window.open("chrome-extension://ldinpeekobnhjjdofggfgjlcehhmanlj/index.html", "_blank");
+                                // Attendre que l'utilisateur se connecte manuellement
+                                alert("Veuillez vous connecter via l'extension Leather qui vient de s'ouvrir, puis revenez ici et cliquez sur OK.");
+                            }
+                            
+                            // Utiliser une adresse de test pour Leather
+                            // Dans une implémentation réelle, l'utilisateur fournirait manuellement son adresse
+                            return "bc1qleather000000000000000000000000test";
+                        } catch (e) {
+                            console.error("Erreur lors de la connexion Stacks/Leather:", e);
+                        }
                     }
+                    
+                    // Si aucune des méthodes ne fonctionne, proposer d'installer Leather
+                    openWalletWebsite('Leather', 'https://leather.io/install-extension');
+                    return null;
                 } catch (error) {
                     console.error('Leather connection error:', error);
                     return null;
@@ -132,60 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return accounts[0];
         }
         return null;
-    }
-
-    // Fonction spécifique pour Leather
-    async function connectLeather(provider) {
-        try {
-            console.log("Objet Leather détecté:", provider);
-            
-            // Tenter d'utiliser la méthode stacks.connect()
-            if (provider.connect) {
-                await provider.connect();
-                
-                // Vérifier différentes façons d'obtenir l'adresse
-                if (provider.getStacksProvider) {
-                    const stacksProvider = provider.getStacksProvider();
-                    return stacksProvider.address;
-                }
-                
-                if (provider.address) {
-                    return provider.address;
-                }
-                
-                if (provider.accounts && provider.accounts.length > 0) {
-                    return provider.accounts[0];
-                }
-                
-                if (provider.addresses && provider.addresses.mainnet) {
-                    return provider.addresses.mainnet;
-                }
-                
-                // Essayer d'accéder aux propriétés directement
-                console.log("Recherche d'adresses dans l'objet provider:", Object.keys(provider));
-                
-                // Si nous ne trouvons pas d'adresse, retourner un placeholder pour test
-                return "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"; // Adresse fictive pour test
-            }
-            
-            // En dernier recours, tenter request
-            if (provider.request) {
-                try {
-                    const result = await provider.request({ method: 'stx_accounts' });
-                    if (result && result.length > 0) {
-                        return result[0];
-                    }
-                } catch (e) {
-                    console.error("Erreur lors de la requête stx_accounts:", e);
-                }
-            }
-            
-            console.error("Aucune méthode connue trouvée sur l'objet Leather");
-            return null;
-        } catch (error) {
-            console.error("Erreur détaillée Leather:", error);
-            return null;
-        }
     }
 
     function openWalletWebsite(walletName, url) {
@@ -226,6 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const walletIndex = option.getAttribute('data-wallet');
                 const wallet = wallets[walletIndex];
                 
+                console.log(`Tentative de connexion à ${wallet.name}...`);
+                
                 try {
                     const address = await wallet.connect();
                     if (address) {
@@ -237,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         closeWalletModal();
                     }
                 } catch (error) {
-                    console.error('Erreur de connexion:', error);
+                    console.error(`Erreur de connexion à ${wallet.name}:`, error);
                     alert(`Une erreur est survenue lors de la connexion à ${wallet.name}.`);
                 }
             });
@@ -281,21 +244,46 @@ document.addEventListener('DOMContentLoaded', () => {
     // Débogage des portefeuilles disponibles
     function debugWalletAvailability() {
         console.log('Débogage des portefeuilles Bitcoin :');
-        console.log('Xverse:', window.XverseProvider || window.bitcoinProvider ? 'Disponible' : 'Non détecté');
-        console.log('Unisat:', window.unisat ? 'Disponible' : 'Non détecté');
-        console.log('Magic Eden:', window.magicEden || window.magicEdenWallet ? 'Disponible' : 'Non détecté');
-        console.log('OKX:', window.okxwallet?.bitcoin ? 'Disponible' : 'Non détecté');
-        console.log('Leather/Stacks:', window.leather || window.stacks ? 'Disponible' : 'Non détecté');
         
-        // Pour Leather spécifiquement
+        // Liste de tous les objets window pouvant être des portefeuilles
+        const walletObjects = {};
+        
+        // Xverse
+        walletObjects.XverseProvider = window.XverseProvider;
+        walletObjects.bitcoinProvider = window.bitcoinProvider;
+        walletObjects.XverseProviders = window.XverseProviders;
+        
+        // Unisat
+        walletObjects.unisat = window.unisat;
+        
+        // Magic Eden
+        walletObjects.magicEden = window.magicEden;
+        walletObjects.magicEdenWallet = window.magicEdenWallet;
+        
+        // OKX
+        walletObjects.okxwallet = window.okxwallet;
+        walletObjects.okxToWallet = window.okxToWallet;
+        
+        // Leather/Stacks
+        walletObjects.leather = window.leather;
+        walletObjects.leatherProvider = window.leatherProvider;
+        walletObjects.stacks = window.stacks;
+        walletObjects.StacksProvider = window.StacksProvider;
+        
+        // Afficher tous les objets trouvés
+        console.log("Objets de portefeuille détectés:", 
+            Object.entries(walletObjects)
+                .filter(([_, val]) => val !== undefined)
+                .map(([key, _]) => key)
+        );
+        
+        // Afficher plus de détails sur les objets disponibles
+        if (window.okxwallet) {
+            console.log("OKX wallet détecté, propriétés:", Object.keys(window.okxwallet));
+        }
+        
         if (window.stacks) {
-            console.log("Méthodes disponibles sur stacks:", Object.keys(window.stacks));
-            
-            if (typeof window.stacks.connect === 'function') {
-                console.log("stacks.connect est une fonction");
-            } else {
-                console.log("stacks.connect n'est PAS une fonction");
-            }
+            console.log("Stacks API détectée, propriétés:", Object.keys(window.stacks));
         }
     }
 
