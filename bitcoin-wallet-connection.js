@@ -19,11 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
             connect: async () => {
                 try {
                     if (window.XverseProviders?.BitcoinProvider) {
-                        return await connectXverse(window.XverseProviders.BitcoinProvider);
+                        const accounts = await window.XverseProviders.BitcoinProvider.request({ method: 'getAccounts' });
+                        return accounts[0];
                     } else if (window.XverseProvider) {
-                        return await connectXverse(window.XverseProvider);
+                        const accounts = await window.XverseProvider.request({ method: 'getAccounts' });
+                        return accounts[0]; 
                     } else if (window.bitcoinProvider) {
-                        return await connectXverse(window.bitcoinProvider);
+                        const accounts = await window.bitcoinProvider.request({ method: 'getAccounts' });
+                        return accounts[0];
                     } else {
                         openWalletWebsite('Xverse', 'https://www.xverse.app/download');
                         return null;
@@ -59,9 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
             connect: async () => {
                 try {
                     if (window.magicEden) {
-                        return await connectMagicEden(window.magicEden);
+                        const accounts = await window.magicEden.request({ method: 'getAccounts' });
+                        return accounts[0];
                     } else if (window.magicEdenWallet) {
-                        return await connectMagicEden(window.magicEdenWallet);
+                        const accounts = await window.magicEdenWallet.request({ method: 'getAccounts' });
+                        return accounts[0];
                     } else {
                         openWalletWebsite('Magic Eden', 'https://wallet.magiceden.io/download');
                         return null;
@@ -75,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { 
             name: 'OKX',
             icon: "assets/okx.png",
-            available: true,
+            available: false,
             connect: async () => {
                 try {
                     if (window.okxwallet?.bitcoin) {
@@ -94,79 +99,18 @@ document.addEventListener('DOMContentLoaded', () => {
         { 
             name: 'Leather',
             icon: "assets/leather.png",
-            available: true,
+            available: false,
+            installOnly: true, // Toujours proposer uniquement l'installation
             connect: async () => {
-                try {
-                    // Si stacks provient de OKX, ne pas l'utiliser pour Leather
-                    const stacksIsFromOKX = window.stacks && 
-                                          (window.stacks.isOKXWallet || 
-                                           Object.prototype.hasOwnProperty.call(window.stacks, 'isOKXWallet'));
-                    
-                    if (stacksIsFromOKX) {
-                        console.log("L'objet stacks provient de OKX, ne pas l'utiliser pour Leather");
-                        
-                        // Demander à l'utilisateur d'installer Leather s'il n'est pas détecté
-                        openWalletWebsite('Leather', 'https://leather.io/install-extension');
-                        return null;
-                    }
-                    
-                    // Si nous avons un vrai objet Leather/stacks
-                    if (window.stacks && window.stacks.connect && typeof window.stacks.connect === 'function') {
-                        try {
-                            console.log("Tentative de connexion avec Leather via window.stacks.connect()");
-                            
-                            // Message d'information pour l'utilisateur
-                            alert("Leather va s'ouvrir. Veuillez approuver la connexion dans l'extension.");
-                            
-                            // Tenter de se connecter via l'API Stacks
-                            const stacksSession = await window.stacks.connect();
-                            console.log("Réponse de stacks.connect():", stacksSession);
-                            
-                            // Obtenir l'adresse Bitcoin de Leather (simulation)
-                            // Dans une vraie implémentation, vous devriez utiliser l'API appropriée
-                            return "bc1ql3ather0000000000000000000000";
-                        } catch (e) {
-                            console.error("Erreur lors de la connexion avec Leather:", e);
-                        }
-                    } else {
-                        console.log("Leather non disponible ou stacks.connect n'est pas une fonction");
-                        openWalletWebsite('Leather', 'https://leather.io/install-extension');
-                    }
-                    
-                    return null;
-                } catch (error) {
-                    console.error('Leather connection error:', error);
-                    return null;
-                }
+                openWalletWebsite('Leather', 'https://leather.io/install-extension');
+                return null;
             }
         }
     ];
 
-    // Fonctions d'aide pour la connexion
-    async function connectXverse(provider) {
-        if (provider.getAccounts) {
-            const accounts = await provider.getAccounts();
-            return accounts[0];
-        } else if (provider.request) {
-            const accounts = await provider.request({ method: 'getAccounts' });
-            return accounts[0];
-        }
-        return null;
-    }
-
-    async function connectMagicEden(provider) {
-        if (provider.getAccounts) {
-            const accounts = await provider.getAccounts();
-            return accounts[0];
-        } else if (provider.request) {
-            const accounts = await provider.request({ method: 'getAccounts' });
-            return accounts[0];
-        }
-        return null;
-    }
-
+    // Ouvrir le site web du portefeuille pour l'installation
     function openWalletWebsite(walletName, url) {
-        const confirmed = confirm(`${walletName} n'a pas été détecté. Souhaitez-vous visiter le site de ${walletName} pour l'installer?`);
+        const confirmed = confirm(`${walletName} n'est pas disponible ou nécessite une configuration. Souhaitez-vous visiter le site de ${walletName}?`);
         if (confirmed) {
             window.open(url, '_blank');
         }
@@ -176,6 +120,37 @@ document.addEventListener('DOMContentLoaded', () => {
     function shortenAddress(address) {
         if (!address) return "";
         return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+    }
+
+    // Mettre à jour la disponibilité des portefeuilles
+    function updateWalletAvailability() {
+        // Vérifier si Stacks est fourni par OKX (il y a une propriété isOKXWallet)
+        const stacksIsFromOKX = window.stacks && (
+            window.stacks.isOKXWallet === true || 
+            Object.prototype.hasOwnProperty.call(window.stacks, 'isOKXWallet')
+        );
+        
+        // Xverse
+        wallets[0].available = !!(window.XverseProviders?.BitcoinProvider || window.XverseProvider || window.bitcoinProvider);
+        
+        // Unisat
+        wallets[1].available = !!window.unisat;
+        
+        // Magic Eden
+        wallets[2].available = !!(window.magicEden || window.magicEdenWallet);
+        
+        // OKX
+        wallets[3].available = !!window.okxwallet?.bitcoin;
+        
+        // Leather - TOUJOURS le marquer comme non disponible pour installation seulement
+        wallets[4].available = false; // Pour forcer l'installation au lieu de la connexion
+        
+        // Log des résultats de détection
+        console.log("Portefeuilles détectés:");
+        wallets.forEach(wallet => {
+            console.log(`- ${wallet.name}: ${wallet.available ? 'Disponible' : 'Non disponible'}`);
+        });
+        console.log("L'objet stacks provient d'OKX:", stacksIsFromOKX);
     }
 
     // Initialiser la modal avec les options de portefeuille
@@ -188,34 +163,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mettre à jour la disponibilité des portefeuilles
         updateWalletAvailability();
         
-        // Filtrer les portefeuilles disponibles
-        const availableWallets = wallets.filter(wallet => wallet.available);
-        
-        if (availableWallets.length === 0) {
-            walletOptionsContainer.innerHTML = `
-                <div class="no-wallets-message">
-                    Aucun portefeuille compatible n'a été détecté.
-                    <br><br>
-                    <button id="install-wallet" class="install-wallet-btn">
-                        Installer un portefeuille
-                    </button>
-                </div>
-            `;
-            
-            document.getElementById('install-wallet')?.addEventListener('click', () => {
-                window.open('https://www.okx.com/web3/wallet/download', '_blank');
-            });
-            
-            return;
-        }
-        
-        // Ajouter chaque option de portefeuille disponible
-        availableWallets.forEach((wallet, index) => {
+        // Ajouter chaque option de portefeuille
+        wallets.forEach((wallet, index) => {
             const optionElement = document.createElement('div');
-            optionElement.className = 'wallet-option';
-            optionElement.setAttribute('data-wallet', wallets.indexOf(wallet)); // Conserver l'index original
+            optionElement.className = wallet.available ? 'wallet-option' : 'wallet-option wallet-option-install';
+            optionElement.setAttribute('data-wallet', index);
             optionElement.innerHTML = `
-                <span class="wallet-option-name">${wallet.name}</span>
+                <span class="wallet-option-name">${wallet.name} ${!wallet.available ? '(Installation)' : ''}</span>
                 <img src="${wallet.icon}" alt="${wallet.name}" class="wallet-option-icon" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 fill=%22%23ddd%22/><text x=%2212%22 y=%2216%22 font-size=%2212%22 text-anchor=%22middle%22 fill=%22%23333%22>${wallet.name[0]}</text></svg>';">
             `;
             walletOptionsContainer.appendChild(optionElement);
@@ -226,6 +180,20 @@ document.addEventListener('DOMContentLoaded', () => {
             option.addEventListener('click', async () => {
                 const walletIndex = option.getAttribute('data-wallet');
                 const wallet = wallets[walletIndex];
+                
+                // Si le portefeuille n'est pas disponible ou est marqué pour installation seulement
+                if (!wallet.available || wallet.installOnly) {
+                    const walletUrls = {
+                        'Xverse': 'https://www.xverse.app/download',
+                        'Unisat': 'https://unisat.io/download',
+                        'Magic Eden': 'https://wallet.magiceden.io/download',
+                        'OKX': 'https://www.okx.com/web3/wallet/download',
+                        'Leather': 'https://leather.io/install-extension'
+                    };
+                    
+                    openWalletWebsite(wallet.name, walletUrls[wallet.name]);
+                    return;
+                }
                 
                 console.log(`Tentative de connexion à ${wallet.name}...`);
                 
@@ -259,29 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (walletModal) {
             walletModal.style.display = 'none';
         }
-    }
-
-    // Mettre à jour la disponibilité des portefeuilles
-    function updateWalletAvailability() {
-        // Xverse
-        wallets[0].available = !!(window.XverseProvider || window.bitcoinProvider || window.XverseProviders?.BitcoinProvider);
-        
-        // Unisat
-        wallets[1].available = !!window.unisat;
-        
-        // Magic Eden
-        wallets[2].available = !!(window.magicEden || window.magicEdenWallet);
-        
-        // OKX
-        wallets[3].available = !!window.okxwallet?.bitcoin;
-        
-        // Leather - vérifier qu'il ne s'agit pas de l'objet stacks d'OKX
-        const stacksIsFromOKX = window.stacks && 
-                              (window.stacks.isOKXWallet || 
-                               Object.prototype.hasOwnProperty.call(window.stacks, 'isOKXWallet'));
-        
-        // Déterminer si Leather est vraiment disponible
-        wallets[4].available = !stacksIsFromOKX && window.stacks && typeof window.stacks.connect === 'function';
     }
 
     // Initialisation des écouteurs d'événements
@@ -321,20 +266,25 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('OKX:', window.okxwallet?.bitcoin ? 'Disponible' : 'Non détecté');
         
         // Leather/Stacks
-        const stacksIsFromOKX = window.stacks && 
-                              (window.stacks.isOKXWallet || 
-                               Object.prototype.hasOwnProperty.call(window.stacks, 'isOKXWallet'));
-        
-        console.log('Leather/Stacks:', window.stacks ? (stacksIsFromOKX ? 'Détecté mais fourni par OKX' : 'Disponible') : 'Non détecté');
-        
-        // Afficher les propriétés de stacks si disponible
+        console.log('Stacks API:', window.stacks ? 'Détecté' : 'Non détecté');
         if (window.stacks) {
-            console.log('Objets disponibles sur stacks:', 
-                Object.keys(window.stacks).filter(key => typeof window.stacks[key] !== 'function'));
-            
-            console.log('stacks.connect est une fonction:', typeof window.stacks.connect === 'function');
+            console.log('Propriétés de stacks:', Object.keys(window.stacks));
+            console.log('stacks.isOKXWallet:', window.stacks.isOKXWallet);
         }
     }
+
+    // Ajouter un style CSS pour les options d'installation
+    const style = document.createElement('style');
+    style.textContent = `
+        .wallet-option-install {
+            opacity: 0.7;
+            background-color: #2a2a3a !important;
+        }
+        .wallet-option-install:hover {
+            opacity: 1;
+        }
+    `;
+    document.head.appendChild(style);
 
     // Initialisation
     initWalletModal();
