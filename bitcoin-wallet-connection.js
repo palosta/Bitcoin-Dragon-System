@@ -1,168 +1,165 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Charger la bibliothèque Sats Connect dynamiquement
-    function loadSatsConnect() {
-        return new Promise((resolve, reject) => {
-            if (window.SatsConnect) {
-                resolve(window.SatsConnect);
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/sats-connect@1.3.0/dist/lib.js';
-            script.async = true;
-            script.onload = () => {
-                if (window.SatsConnect) {
-                    resolve(window.SatsConnect);
-                } else {
-                    reject(new Error('Sats Connect not loaded correctly'));
-                }
-            };
-            script.onerror = () => reject(new Error('Failed to load Sats Connect'));
-            document.head.appendChild(script);
-        });
-    }
-
     const connectButton = document.getElementById('connect-wallet-btn');
     const walletAddressDisplay = document.getElementById('wallet-address');
     const walletModal = document.getElementById('wallet-modal');
     const closeModalButton = document.querySelector('.close-modal');
     const walletOptionsContainer = document.querySelector('.wallet-options');
-    const verificationResult = document.getElementById('verification-result');
 
     if (!connectButton) {
         console.error('Bouton de connexion non trouvé');
         return;
     }
 
-    // Configuration des portefeuilles avec leurs icônes
+    // Configuration des portefeuilles - assurez-vous que les chemins d'icônes sont corrects
     const wallets = [
         { 
             name: 'Xverse',
-            icon: "assets/xverse.svg",
-            iconType: "svg",
-            walletId: "xverse"
+            icon: "assets/xverse.png", // Changé en .png au cas où
+            connect: async () => {
+                try {
+                    // Vérifiez différentes façons d'accéder à Xverse
+                    if (window.XverseProviders?.BitcoinProvider) {
+                        return await connectXverse(window.XverseProviders.BitcoinProvider);
+                    } else if (window.XverseProvider) {
+                        return await connectXverse(window.XverseProvider);
+                    } else if (window.bitcoinProvider) {
+                        return await connectXverse(window.bitcoinProvider);
+                    } else {
+                        openWalletWebsite('Xverse', 'https://www.xverse.app/download');
+                        return null;
+                    }
+                } catch (error) {
+                    console.error('Xverse connection error:', error);
+                    return null;
+                }
+            }
         },
         { 
             name: 'Unisat',
             icon: "assets/unisat.png",
-            iconType: "png",
-            walletId: "unisat"
+            connect: async () => {
+                try {
+                    if (!window.unisat) {
+                        openWalletWebsite('Unisat', 'https://unisat.io/download');
+                        return null;
+                    }
+                    const accounts = await window.unisat.requestAccounts();
+                    return accounts[0];
+                } catch (error) {
+                    console.error('Unisat connection error:', error);
+                    return null;
+                }
+            }
         },
         { 
             name: 'Magic Eden',
             icon: "assets/magic-eden.png",
-            iconType: "png",
-            walletId: "magiceden"
+            connect: async () => {
+                try {
+                    if (window.magicEden) {
+                        return await connectMagicEden(window.magicEden);
+                    } else if (window.magicEdenWallet) {
+                        return await connectMagicEden(window.magicEdenWallet);
+                    } else {
+                        openWalletWebsite('Magic Eden', 'https://wallet.magiceden.io/download');
+                        return null;
+                    }
+                } catch (error) {
+                    console.error('Magic Eden connection error:', error);
+                    return null;
+                }
+            }
         },
         { 
             name: 'OKX',
             icon: "assets/okx.png",
-            iconType: "png",
-            walletId: "okx"
+            connect: async () => {
+                try {
+                    if (window.okxwallet?.bitcoin) {
+                        const accounts = await window.okxwallet.bitcoin.requestAccounts();
+                        return accounts[0];
+                    } else {
+                        openWalletWebsite('OKX', 'https://www.okx.com/web3/wallet/download');
+                        return null;
+                    }
+                } catch (error) {
+                    console.error('OKX connection error:', error);
+                    return null;
+                }
+            }
         },
         { 
             name: 'Leather',
             icon: "assets/leather.png",
-            iconType: "png",
-            walletId: "leather"
+            connect: async () => {
+                try {
+                    if (window.leather) {
+                        return await connectLeather(window.leather);
+                    } else if (window.leatherProvider) {
+                        return await connectLeather(window.leatherProvider);
+                    } else if (window.stacks) {
+                        return await connectLeather(window.stacks);
+                    } else {
+                        openWalletWebsite('Leather', 'https://leather.io/install-extension');
+                        return null;
+                    }
+                } catch (error) {
+                    console.error('Leather connection error:', error);
+                    return null;
+                }
+            }
         }
     ];
+
+    // Fonctions d'aide pour la connexion
+    async function connectXverse(provider) {
+        if (provider.getAccounts) {
+            const accounts = await provider.getAccounts();
+            return accounts[0];
+        } else if (provider.request) {
+            const accounts = await provider.request({ method: 'getAccounts' });
+            return accounts[0];
+        }
+        return null;
+    }
+
+    async function connectMagicEden(provider) {
+        if (provider.getAccounts) {
+            const accounts = await provider.getAccounts();
+            return accounts[0];
+        } else if (provider.request) {
+            const accounts = await provider.request({ method: 'getAccounts' });
+            return accounts[0];
+        }
+        return null;
+    }
+
+    async function connectLeather(provider) {
+        if (provider.getAccounts) {
+            const accounts = await provider.getAccounts();
+            return accounts[0];
+        } else if (provider.request) {
+            const accounts = await provider.request({ method: 'getAccounts' });
+            return accounts[0];
+        } else if (provider.connect) {
+            await provider.connect();
+            const account = provider.addresses?.mainnet;
+            return account;
+        }
+        return null;
+    }
+
+    function openWalletWebsite(walletName, url) {
+        const confirmed = confirm(`${walletName} n'a pas été détecté. Souhaitez-vous visiter le site de ${walletName} pour l'installer?`);
+        if (confirmed) {
+            window.open(url, '_blank');
+        }
+    }
 
     // Raccourcir l'adresse
     function shortenAddress(address) {
         if (!address) return "";
         return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-    }
-
-    // Connexion avec Sats Connect
-    async function connectWithSatsConnect(wallet) {
-        try {
-            const SatsConnect = await loadSatsConnect();
-
-            SatsConnect.getAddress({
-                payload: {
-                    purposes: ["ordinals", "payment"],
-                    message: "Bitcoin Dragon System souhaite se connecter à votre portefeuille",
-                    network: {
-                        type: "Mainnet",
-                    },
-                    wallets: [wallet.walletId], // Spécifier le portefeuille à utiliser
-                },
-                onFinish: (response) => {
-                    console.log("Connexion réussie:", response);
-                    // Utiliser l'adresse ordinale ou de paiement
-                    const address = response.addresses.ordinals || response.addresses.payment;
-                    
-                    if (walletAddressDisplay) {
-                        walletAddressDisplay.textContent = `Connecté avec ${wallet.name}: ${shortenAddress(address)}`;
-                    }
-                    
-                    connectButton.textContent = 'Connecté';
-                    connectButton.classList.add('connected');
-                    closeWalletModal();
-                },
-                onCancel: () => {
-                    console.log("Connexion annulée");
-                },
-                onError: (error) => {
-                    console.error("Erreur de connexion:", error);
-                    alert(`Erreur lors de la connexion à ${wallet.name}. Assurez-vous que le portefeuille est installé et activé.`);
-                }
-            });
-        } catch (error) {
-            console.error("Erreur SatsConnect:", error);
-            
-            // Fallback vers l'ancienne méthode en cas d'échec
-            connectWithFallback(wallet);
-        }
-    }
-
-    // Méthode de connexion de secours (fallback)
-    async function connectWithFallback(wallet) {
-        try {
-            let address = null;
-            
-            // OKX - fonctionne déjà selon vos logs
-            if (wallet.name === 'OKX' && window.okxwallet?.bitcoin) {
-                const accounts = await window.okxwallet.bitcoin.requestAccounts();
-                address = accounts[0];
-            }
-            // Unisat
-            else if (wallet.name === 'Unisat' && window.unisat) {
-                const accounts = await window.unisat.requestAccounts();
-                address = accounts[0];
-            }
-            // Pour les autres portefeuilles, proposer l'installation
-            else {
-                const walletUrls = {
-                    'Xverse': 'https://www.xverse.app/download',
-                    'Unisat': 'https://unisat.io/download',
-                    'Magic Eden': 'https://wallet.magiceden.io/download',
-                    'OKX': 'https://www.okx.com/web3/wallet/download',
-                    'Leather': 'https://leather.io/install-extension'
-                };
-                
-                const openWallet = confirm(`${wallet.name} n'a pas été détecté. Souhaitez-vous l'installer?`);
-                if (openWallet && walletUrls[wallet.name]) {
-                    window.open(walletUrls[wallet.name], '_blank');
-                }
-                return;
-            }
-            
-            if (address) {
-                if (walletAddressDisplay) {
-                    walletAddressDisplay.textContent = `Connecté avec ${wallet.name}: ${shortenAddress(address)}`;
-                }
-                connectButton.textContent = 'Connecté';
-                connectButton.classList.add('connected');
-                closeWalletModal();
-            } else {
-                alert(`Échec de la connexion à ${wallet.name}. Vérifiez que le portefeuille est installé.`);
-            }
-        } catch (error) {
-            console.error('Erreur de connexion (fallback):', error);
-            alert(`Une erreur est survenue lors de la connexion à ${wallet.name}.`);
-        }
     }
 
     // Initialiser la modal avec les options de portefeuille
@@ -179,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
             optionElement.setAttribute('data-wallet', index);
             optionElement.innerHTML = `
                 <span class="wallet-option-name">${wallet.name}</span>
-                <img src="${wallet.icon}" alt="${wallet.name}" class="wallet-option-icon">
+                <img src="${wallet.icon}" alt="${wallet.name}" class="wallet-option-icon" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 fill=%22%23ddd%22/><text x=%2212%22 y=%2216%22 font-size=%2212%22 text-anchor=%22middle%22 fill=%22%23333%22>${wallet.name[0]}</text></svg>';">
             `;
             walletOptionsContainer.appendChild(optionElement);
         });
@@ -190,8 +187,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const walletIndex = option.getAttribute('data-wallet');
                 const wallet = wallets[walletIndex];
                 
-                // Utiliser Sats Connect pour la connexion
-                connectWithSatsConnect(wallet);
+                try {
+                    const address = await wallet.connect();
+                    if (address) {
+                        if (walletAddressDisplay) {
+                            walletAddressDisplay.textContent = `Connecté avec ${wallet.name}: ${shortenAddress(address)}`;
+                        }
+                        connectButton.textContent = 'Connecté';
+                        connectButton.classList.add('connected');
+                        closeWalletModal();
+                    }
+                } catch (error) {
+                    console.error('Erreur de connexion:', error);
+                    alert(`Une erreur est survenue lors de la connexion à ${wallet.name}.`);
+                }
             });
         });
     }
@@ -233,54 +242,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Débogage des portefeuilles disponibles
     function debugWalletAvailability() {
         console.log('Débogage des portefeuilles Bitcoin :');
-        
-        // Xverse
-        console.log('Xverse présence:', window.XverseProvider ? 'XverseProvider trouvé' : 'XverseProvider non trouvé');
-        console.log('Bitcoin provider:', window.bitcoinProvider ? 'bitcoinProvider trouvé' : 'bitcoinProvider non trouvé');
-        
-        // Unisat
-        console.log('Unisat présence:', window.unisat ? 'Trouvé' : 'Non trouvé');
-        
-        // Magic Eden
-        console.log('Magic Eden présence:', window.magicEden ? 'magicEden trouvé' : 'magicEden non trouvé');
-        console.log('Magic Eden wallet:', window.magicEdenWallet ? 'magicEdenWallet trouvé' : 'magicEdenWallet non trouvé');
-        
-        // OKX
-        console.log('OKX présence (bitcoin):', window.okxwallet?.bitcoin ? 'okxwallet.bitcoin trouvé' : 'okxwallet.bitcoin non trouvé');
-        console.log('OKX présence (alt):', window.bitcoin?.okx ? 'bitcoin.okx trouvé' : 'bitcoin.okx non trouvé');
-        
-        // Leather
-        console.log('Leather présence:', window.leather ? 'leather trouvé' : 'leather non trouvé');
-        console.log('Leather provider:', window.leatherProvider ? 'leatherProvider trouvé' : 'leatherProvider non trouvé');
-        
-        // Sats Connect
-        console.log('Sats Connect présence:', window.SatsConnect ? 'Trouvé' : 'Non trouvé');
-        
-        // Log tous les objets window qui contiennent "bitcoin"
-        console.log('Tous les objets bitcoin possibles:');
-        Object.keys(window).filter(key => 
-            key.toLowerCase().includes('bitcoin') || 
-            key.toLowerCase().includes('wallet') || 
-            key.toLowerCase().includes('xverse') || 
-            key.toLowerCase().includes('magic') ||
-            key.toLowerCase().includes('leather') ||
-            key.toLowerCase().includes('stacks')
-        ).forEach(key => {
-            console.log(`- ${key} trouvé`);
-        });
+        console.log('Xverse:', window.XverseProvider || window.bitcoinProvider ? 'Disponible' : 'Non détecté');
+        console.log('Unisat:', window.unisat ? 'Disponible' : 'Non détecté');
+        console.log('Magic Eden:', window.magicEden || window.magicEdenWallet ? 'Disponible' : 'Non détecté');
+        console.log('OKX:', window.okxwallet?.bitcoin ? 'Disponible' : 'Non détecté');
+        console.log('Leather/Stacks:', window.leather || window.stacks ? 'Disponible' : 'Non détecté');
     }
 
     // Initialisation
     initWalletModal();
     initEventListeners();
     debugWalletAvailability();
-    
-    // Précharger Sats Connect
-    loadSatsConnect().then(() => {
-        console.log('Sats Connect chargé avec succès');
-    }).catch(error => {
-        console.error('Erreur de chargement de Sats Connect:', error);
-    });
 
     console.log('Script de connexion de portefeuille initialisé');
 });
