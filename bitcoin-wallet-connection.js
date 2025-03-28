@@ -14,8 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const wallets = [
         { 
             name: 'Xverse',
-            icon: "assets/xverse.svg",
-            iconType: "svg",
+            icon: "assets/xverse.png",
+            iconType: "png",
             connect: async () => {
                 try {
                     const provider = window.XverseProvider || window.bitcoinProvider;
