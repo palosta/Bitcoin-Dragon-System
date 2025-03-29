@@ -1,4 +1,31 @@
+// bitcoin-wallet-connection.js
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Fonction pour charger la bibliothèque Sats Connect dynamiquement
+    function loadSatsConnect() {
+        return new Promise((resolve, reject) => {
+            // Vérifier si Sats Connect est déjà chargé
+            if (window.SatsConnect) {
+                resolve(window.SatsConnect);
+                return;
+            }
+
+            // Créer un élément script pour charger Sats Connect
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/sats-connect@3.0.0/dist/umd/index.js';
+            script.async = true;
+            script.onload = () => {
+                if (window.SatsConnect) {
+                    resolve(window.SatsConnect);
+                } else {
+                    reject(new Error('Sats Connect not loaded correctly'));
+                }
+            };
+            script.onerror = () => reject(new Error('Failed to load Sats Connect'));
+            document.head.appendChild(script);
+        });
+    }
+
     const connectButton = document.getElementById('connect-wallet-btn');
     const walletAddressDisplay = document.getElementById('wallet-address');
     const walletModal = document.getElementById('wallet-modal');
@@ -16,61 +43,23 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Xverse',
             icon: "assets/xverse.png",
             available: false,
-            detection: {
-                // Différentes façons de détecter Xverse
-                checks: [
-                    { path: 'window.XverseProviders?.BitcoinProvider', found: false },
-                    { path: 'window.XverseProvider', found: false },
-                    { path: 'window.bitcoinProvider', found: false },
-                    { path: 'window.bitcoin?.xverse', found: false },
-                    { path: 'window.__XVERSE__', found: false }
-                ],
-                dynamic: [
-                    'window.__XVERSE__',
-                    'window.XverseProviders?.BitcoinProvider',
-                    'window.XverseProvider',
-                    'window.bitcoinProvider',
-                    'window.bitcoin?.xverse'
-                ]
-            },
             connect: async () => {
                 try {
-                    // Vérifier dynamiquement si Xverse est détecté maintenant
-                    const dynamicDetection = runDynamicDetection(wallets[0].detection.dynamic);
+                    const SatsConnect = await loadSatsConnect();
+                    const { request } = SatsConnect;
                     
-                    // Si détecté dynamiquement, essayer de se connecter
-                    if (dynamicDetection) {
-                        console.log("Xverse détecté dynamiquement:", dynamicDetection);
-                        
-                        // Essayer plusieurs méthodes de connexion
-                        if (window.XverseProviders?.BitcoinProvider) {
-                            const accounts = await window.XverseProviders.BitcoinProvider.request({ method: 'getAccounts' });
-                            return accounts[0];
-                        } else if (window.XverseProvider) {
-                            const accounts = await window.XverseProvider.request({ method: 'getAccounts' });
-                            return accounts[0];
-                        } else if (window.bitcoinProvider) {
-                            const accounts = await window.bitcoinProvider.request({ method: 'getAccounts' });
-                            return accounts[0];
-                        } else if (window.bitcoin?.xverse) {
-                            const accounts = await window.bitcoin.xverse.request({ method: 'getAccounts' });
-                            return accounts[0];
-                        } else if (window.__XVERSE__) {
-                            // Essayer de la méthode avec __XVERSE__
-                            if (window.__XVERSE__.bitcoin) {
-                                const accounts = await window.__XVERSE__.bitcoin.request({ method: 'getAccounts' });
-                                return accounts[0];
-                            }
-                        }
+                    // Utiliser la méthode wallet_connect pour se connecter
+                    const response = await request('wallet_connect', {
+                        addresses: ['ordinals', 'payment', 'stacks'],
+                        message: 'Connect to Bitcoin Dragon System'
+                    });
+                    
+                    if (response.status === 'success') {
+                        const paymentAddress = response.result.addresses.find(
+                            addr => addr.purpose === 'payment'
+                        );
+                        return paymentAddress?.address;
                     }
-                    
-                    // Si non détecté, proposer d'ouvrir l'extension manuellement
-                    const shouldOpen = confirm(`Xverse n'a pas été détecté automatiquement. Si vous l'avez déjà installé, veuillez l'ouvrir manuellement dans votre barre d'extensions, puis réessayez. Sinon, souhaitez-vous visiter le site d'installation?`);
-                    
-                    if (shouldOpen) {
-                        window.open('https://www.xverse.app/download', '_blank');
-                    }
-                    
                     return null;
                 } catch (error) {
                     console.error('Xverse connection error:', error);
@@ -82,41 +71,28 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Unisat',
             icon: "assets/unisat.png",
             available: false,
-            detection: {
-                checks: [
-                    { path: 'window.unisat', found: false },
-                    { path: 'window.bitcoin?.unisat', found: false }
-                ],
-                dynamic: [
-                    'window.unisat',
-                    'window.bitcoin?.unisat'
-                ]
-            },
             connect: async () => {
                 try {
-                    // Vérifier dynamiquement si Unisat est détecté maintenant
-                    const dynamicDetection = runDynamicDetection(wallets[1].detection.dynamic);
-                    
-                    if (dynamicDetection) {
-                        console.log("Unisat détecté dynamiquement:", dynamicDetection);
-                        
-                        if (window.unisat) {
-                            const accounts = await window.unisat.requestAccounts();
-                            return accounts[0];
-                        } else if (window.bitcoin?.unisat) {
-                            const accounts = await window.bitcoin.unisat.requestAccounts();
-                            return accounts[0];
-                        }
+                    // Vérifier si l'API Unisat est disponible
+                    if (window.unisat) {
+                        const accounts = await window.unisat.requestAccounts();
+                        return accounts[0];
                     }
                     
-                    // Si non détecté, proposer d'ouvrir l'extension manuellement
-                    const shouldOpen = confirm(`Unisat n'a pas été détecté automatiquement. Si vous l'avez déjà installé, veuillez l'ouvrir manuellement dans votre barre d'extensions, puis réessayez. Sinon, souhaitez-vous visiter le site d'installation?`);
+                    // Utiliser Sats Connect comme fallback
+                    const SatsConnect = await loadSatsConnect();
+                    const { Wallet } = SatsConnect;
                     
-                    if (shouldOpen) {
-                        window.open('https://unisat.io/download', '_blank');
-                    }
+                    const data = await Wallet.request('getAccounts', {
+                        network: {
+                            type: 'Mainnet'
+                        },
+                        message: 'Connect to Bitcoin Dragon System',
+                        paymentAddress: true,
+                        ordinalAddress: true
+                    });
                     
-                    return null;
+                    return data.paymentAddress || data.address;
                 } catch (error) {
                     console.error('Unisat connection error:', error);
                     return null;
@@ -127,58 +103,21 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Magic Eden',
             icon: "assets/magic-eden.png",
             available: false,
-            detection: {
-                checks: [
-                    { path: 'window.magicEden', found: false },
-                    { path: 'window.magicEdenWallet', found: false },
-                    { path: 'window.bitcoin?.magicEden', found: false },
-                    { path: 'window.magiceden', found: false }, // Vérifier variante en minuscules
-                    { path: 'window.ordinalswallet', found: false } // Ancien nom pour Magic Eden
-                ],
-                dynamic: [
-                    'window.magicEden',
-                    'window.magicEdenWallet',
-                    'window.bitcoin?.magicEden',
-                    'window.magiceden',
-                    'window.ordinalswallet'
-                ]
-            },
             connect: async () => {
                 try {
-                    // Vérifier dynamiquement si Magic Eden est détecté maintenant
-                    const dynamicDetection = runDynamicDetection(wallets[2].detection.dynamic);
+                    const SatsConnect = await loadSatsConnect();
+                    const { Wallet } = SatsConnect;
                     
-                    if (dynamicDetection) {
-                        console.log("Magic Eden détecté dynamiquement:", dynamicDetection);
-                        
-                        if (window.magicEden) {
-                            const accounts = await window.magicEden.request({ method: 'getAccounts' });
-                            return accounts[0];
-                        } else if (window.magicEdenWallet) {
-                            const accounts = await window.magicEdenWallet.request({ method: 'getAccounts' });
-                            return accounts[0];
-                        } else if (window.bitcoin?.magicEden) {
-                            const accounts = await window.bitcoin.magicEden.request({ method: 'getAccounts' });
-                            return accounts[0];
-                        } else if (window.magiceden) {
-                            // Variante en minuscules
-                            const accounts = await window.magiceden.request({ method: 'getAccounts' });
-                            return accounts[0];
-                        } else if (window.ordinalswallet) {
-                            // Ancien nom pour Magic Eden
-                            const accounts = await window.ordinalswallet.request({ method: 'getAccounts' });
-                            return accounts[0];
-                        }
-                    }
+                    const data = await Wallet.request('getAccounts', {
+                        network: {
+                            type: 'Mainnet'
+                        },
+                        message: 'Connect to Bitcoin Dragon System',
+                        paymentAddress: true,
+                        ordinalAddress: true
+                    });
                     
-                    // Si non détecté, proposer d'ouvrir l'extension manuellement
-                    const shouldOpen = confirm(`Magic Eden n'a pas été détecté automatiquement. Si vous l'avez déjà installé, veuillez l'ouvrir manuellement dans votre barre d'extensions, puis réessayez. Sinon, souhaitez-vous visiter le site d'installation?`);
-                    
-                    if (shouldOpen) {
-                        window.open('https://wallet.magiceden.io/download', '_blank');
-                    }
-                    
-                    return null;
+                    return data.paymentAddress || data.address;
                 } catch (error) {
                     console.error('Magic Eden connection error:', error);
                     return null;
@@ -189,41 +128,28 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'OKX',
             icon: "assets/okx.png",
             available: false,
-            detection: {
-                checks: [
-                    { path: 'window.okxwallet?.bitcoin', found: false },
-                    { path: 'window.bitcoin?.okx', found: false }
-                ],
-                dynamic: [
-                    'window.okxwallet?.bitcoin',
-                    'window.bitcoin?.okx'
-                ]
-            },
             connect: async () => {
                 try {
-                    // Vérifier dynamiquement si OKX est détecté maintenant
-                    const dynamicDetection = runDynamicDetection(wallets[3].detection.dynamic);
-                    
-                    if (dynamicDetection) {
-                        console.log("OKX détecté dynamiquement:", dynamicDetection);
-                        
-                        if (window.okxwallet?.bitcoin) {
-                            const accounts = await window.okxwallet.bitcoin.requestAccounts();
-                            return accounts[0];
-                        } else if (window.bitcoin?.okx) {
-                            const accounts = await window.bitcoin.okx.requestAccounts();
-                            return accounts[0];
-                        }
+                    // Vérifier si OKX Wallet est disponible
+                    if (window.okxwallet?.bitcoin) {
+                        const accounts = await window.okxwallet.bitcoin.requestAccounts();
+                        return accounts[0];
                     }
                     
-                    // Si non détecté, proposer l'installation
-                    const shouldOpen = confirm(`OKX n'a pas été détecté automatiquement. Si vous l'avez déjà installé, veuillez l'ouvrir manuellement dans votre barre d'extensions, puis réessayez. Sinon, souhaitez-vous visiter le site d'installation?`);
+                    // Utiliser Sats Connect comme fallback
+                    const SatsConnect = await loadSatsConnect();
+                    const { Wallet } = SatsConnect;
                     
-                    if (shouldOpen) {
-                        window.open('https://www.okx.com/web3/wallet/download', '_blank');
-                    }
+                    const data = await Wallet.request('getAccounts', {
+                        network: {
+                            type: 'Mainnet'
+                        },
+                        message: 'Connect to Bitcoin Dragon System',
+                        paymentAddress: true,
+                        ordinalAddress: true
+                    });
                     
-                    return null;
+                    return data.paymentAddress || data.address;
                 } catch (error) {
                     console.error('OKX connection error:', error);
                     return null;
@@ -234,75 +160,21 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Leather',
             icon: "assets/leather.png",
             available: false,
-            detection: {
-                checks: [
-                    { path: 'window.leather', found: false },
-                    { path: 'window.leatherProvider', found: false },
-                    { path: 'window.StacksProvider', found: false },
-                    // Exclure window.stacks si isOKXWallet est true
-                    { path: 'window.stacks && !window.stacks.isOKXWallet', found: false }
-                ],
-                dynamic: [
-                    'window.leather',
-                    'window.leatherProvider',
-                    'window.StacksProvider',
-                    'window.stacks && !window.stacks.isOKXWallet'
-                ]
-            },
             connect: async () => {
                 try {
-                    // Vérifier dynamiquement si Leather est détecté maintenant
-                    const dynamicDetection = runDynamicDetection(wallets[4].detection.dynamic);
+                    const SatsConnect = await loadSatsConnect();
+                    const { Wallet } = SatsConnect;
                     
-                    if (dynamicDetection) {
-                        console.log("Leather détecté dynamiquement:", dynamicDetection);
-                        
-                        if (window.leather) {
-                            if (window.leather.request) {
-                                const accounts = await window.leather.request({ method: 'getAccounts' });
-                                return accounts[0];
-                            }
-                        }
-                        
-                        if (window.leatherProvider) {
-                            if (window.leatherProvider.request) {
-                                const accounts = await window.leatherProvider.request({ method: 'getAccounts' });
-                                return accounts[0];
-                            }
-                        }
-                        
-                        if (window.StacksProvider) {
-                            if (window.StacksProvider.request) {
-                                const accounts = await window.StacksProvider.request({ method: 'getAccounts' });
-                                return accounts[0];
-                            }
-                        }
-                    }
+                    const data = await Wallet.request('getAccounts', {
+                        network: {
+                            type: 'Mainnet'
+                        },
+                        message: 'Connect to Bitcoin Dragon System',
+                        paymentAddress: true,
+                        ordinalAddress: true
+                    });
                     
-                    // Si stacks est disponible mais n'est pas OKX, essayer de l'utiliser
-                    if (window.stacks && !window.stacks.isOKXWallet) {
-                        try {
-                            if (typeof window.stacks.connect === 'function') {
-                                await window.stacks.connect();
-                                
-                                // Récupérer l'adresse si possible
-                                if (window.stacks.address) {
-                                    return window.stacks.address;
-                                }
-                            }
-                        } catch (e) {
-                            console.error("Erreur lors de la connexion via stacks:", e);
-                        }
-                    }
-                    
-                    // Si non détecté, proposer d'ouvrir l'extension manuellement
-                    const shouldOpen = confirm(`Leather n'a pas été détecté automatiquement. Si vous l'avez déjà installé, veuillez l'ouvrir manuellement dans votre barre d'extensions, puis réessayez. Sinon, souhaitez-vous visiter le site d'installation?`);
-                    
-                    if (shouldOpen) {
-                        window.open('https://leather.io/install-extension', '_blank');
-                    }
-                    
-                    return null;
+                    return data.paymentAddress || data.address;
                 } catch (error) {
                     console.error('Leather connection error:', error);
                     return null;
@@ -311,87 +183,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     ];
 
-    // Fonction pour évaluer en toute sécurité les chemins d'accès aux objets
-    function safeEval(path) {
-        try {
-            // Cas spécial pour les opérateurs logiques (comme "&&")
-            if (path.includes('&&')) {
-                const parts = path.split('&&').map(p => p.trim());
-                // Vérifier séquentiellement chaque partie
-                for (const part of parts) {
-                    if (!safeEval(part)) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            
-            // Parcourir le chemin en séparant par les points
-            const parts = path.split('.');
-            let current = window;
-            
-            for (const part of parts) {
-                // Gestion des expressions avec ?. pour la vérification optionnelle
-                if (part.includes('?')) {
-                    const actualPart = part.replace('?', '');
-                    if (current === undefined || current === null) {
-                        return undefined;
-                    }
-                    current = current[actualPart];
-                } else {
-                    if (current === undefined || current === null) {
-                        return undefined;
-                    }
-                    current = current[part];
-                }
-            }
-            
-            return current;
-        } catch (e) {
-            console.warn(`Erreur lors de l'évaluation de ${path}:`, e);
-            return undefined;
-        }
-    }
-    
-    // Vérifier dynamiquement la disponibilité d'un portefeuille
-    function runDynamicDetection(paths) {
-        for (const path of paths) {
-            const result = safeEval(path);
-            if (result) {
-                return path;
-            }
-        }
-        return null;
-    }
-
     // Raccourcir l'adresse
     function shortenAddress(address) {
         if (!address) return "";
         return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
     }
 
-    // Mettre à jour la disponibilité des portefeuilles
-    function updateWalletAvailability() {
-        console.log("Mise à jour de la disponibilité des portefeuilles...");
-        
-        // Vérifier chaque portefeuille
-        wallets.forEach(wallet => {
-            wallet.available = false;
+    // Vérifier la disponibilité des portefeuilles
+    async function checkWalletAvailability() {
+        try {
+            // Charger Sats Connect
+            await loadSatsConnect();
             
-            // Parcourir tous les chemins de détection
-            wallet.detection.checks.forEach(check => {
-                check.found = !!safeEval(check.path);
-                if (check.found) {
-                    wallet.available = true;
-                }
+            // Obtenir la liste des portefeuilles disponibles
+            const { getProviders } = window.SatsConnect;
+            const availableProviders = await getProviders();
+            
+            // Mettre à jour la disponibilité des portefeuilles
+            wallets.forEach(wallet => {
+                const provider = availableProviders.find(p => 
+                    p.name.toLowerCase().includes(wallet.name.toLowerCase())
+                );
+                wallet.available = !!provider;
             });
             
-            // Log pour le débogage
-            console.log(`Vérification de ${wallet.name}:`, 
-                wallet.detection.checks.map(c => `${c.path}: ${c.found}`).join(', '),
-                `Disponible: ${wallet.available}`
-            );
-        });
+            // Vérifier également les API directes
+            if (window.unisat) {
+                wallets.find(w => w.name === 'Unisat').available = true;
+            }
+            
+            if (window.okxwallet?.bitcoin) {
+                wallets.find(w => w.name === 'OKX').available = true;
+            }
+            
+            console.log('Wallet availability updated:', wallets.map(w => `${w.name}: ${w.available}`).join(', '));
+        } catch (error) {
+            console.error('Error checking wallet availability:', error);
+        }
     }
 
     // Initialiser la modal avec les options de portefeuille
@@ -400,9 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Vider le conteneur
         walletOptionsContainer.innerHTML = '';
-        
-        // Mettre à jour la disponibilité des portefeuilles
-        updateWalletAvailability();
         
         // Ajouter chaque option de portefeuille
         wallets.forEach((wallet, index) => {
@@ -422,6 +247,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const walletIndex = option.getAttribute('data-wallet');
                 const wallet = wallets[walletIndex];
                 
+                if (!wallet.available) {
+                    // Diriger vers le site d'installation du portefeuille
+                    const walletUrls = {
+                        'Xverse': 'https://www.xverse.app/download',
+                        'Unisat': 'https://unisat.io/download',
+                        'Magic Eden': 'https://wallet.magiceden.io/download',
+                        'OKX': 'https://www.okx.com/web3/wallet/download',
+                        'Leather': 'https://leather.io/install-extension'
+                    };
+                    
+                    window.open(walletUrls[wallet.name], '_blank');
+                    return;
+                }
+                
                 console.log(`Tentative de connexion à ${wallet.name}...`);
                 
                 try {
@@ -433,6 +272,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         connectButton.textContent = 'Connecté';
                         connectButton.classList.add('connected');
                         closeWalletModal();
+                    } else {
+                        alert(`Échec de la connexion à ${wallet.name}. Vérifiez que l'extension est correctement installée.`);
                     }
                 } catch (error) {
                     console.error(`Erreur de connexion à ${wallet.name}:`, error);
@@ -446,38 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function openWalletModal() {
         if (walletModal) {
             walletModal.style.display = 'flex';
-            
-            // Mettre à jour la disponibilité à chaque ouverture
-            // afin de détecter les extensions activées entre-temps
-            initWalletModal();
-            
-            // Réessayer la détection après un court délai
-            // (certaines extensions peuvent ne pas être immédiatement disponibles)
-            setTimeout(() => {
-                updateWalletAvailability();
-                refreshWalletOptions();
-            }, 1000);
         }
-    }
-    
-    // Rafraîchir les options de portefeuille sans recréer tous les éléments
-    function refreshWalletOptions() {
-        if (!walletOptionsContainer) return;
-        
-        const options = walletOptionsContainer.querySelectorAll('.wallet-option');
-        options.forEach((option, index) => {
-            const walletIndex = option.getAttribute('data-wallet');
-            const wallet = wallets[walletIndex];
-            
-            // Mettre à jour la classe et le texte en fonction de la disponibilité
-            if (wallet.available) {
-                option.classList.remove('wallet-option-install');
-                option.querySelector('.wallet-option-name').textContent = wallet.name;
-            } else {
-                option.classList.add('wallet-option-install');
-                option.querySelector('.wallet-option-name').textContent = `${wallet.name} (Installation)`;
-            }
-        });
     }
 
     // Fermer la modal de portefeuille
@@ -490,7 +300,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialisation des écouteurs d'événements
     function initEventListeners() {
         // Ouvrir la modal au clic sur le bouton de connexion
-        connectButton.addEventListener('click', openWalletModal);
+        connectButton.addEventListener('click', async () => {
+            // Vérifier la disponibilité des portefeuilles avant d'ouvrir la modal
+            await checkWalletAvailability();
+            
+            // Initialiser la modal avec les portefeuilles disponibles
+            initWalletModal();
+            
+            // Ouvrir la modal
+            openWalletModal();
+        });
         
         // Fermer la modal au clic sur le bouton de fermeture
         if (closeModalButton) {
@@ -507,94 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Débogage complet des objets de l'extension
-    function debugExtensionObjects() {
-        // Vérification des objets globaux qui pourraient être fournis par les extensions
-        const globalObjects = [
-            'window.XverseProviders',
-            'window.XverseProvider',
-            'window.bitcoinProvider',
-            'window.__XVERSE__',
-            'window.unisat',
-            'window.magicEden',
-            'window.magicEdenWallet',
-            'window.magiceden',
-            'window.ordinalswallet',
-            'window.okxwallet',
-            'window.bitcoin',
-            'window.stacks',
-            'window.leather',
-            'window.leatherProvider',
-            'window.StacksProvider'
-        ];
-        
-        console.log("Débogage des objets d'extension:");
-        globalObjects.forEach(path => {
-            const exists = !!safeEval(path);
-            console.log(`- ${path}: ${exists ? 'Trouvé' : 'Non trouvé'}`);
-            
-            if (exists) {
-                const obj = safeEval(path);
-                if (obj && typeof obj === 'object') {
-                    // Afficher les propriétés non-fonction de l'objet
-                    const props = Object.keys(obj).filter(k => typeof obj[k] !== 'function');
-                    console.log(`  Propriétés: ${props.join(', ')}`);
-                    
-                    // Afficher les méthodes disponibles
-                    const methods = Object.keys(obj).filter(k => typeof obj[k] === 'function');
-                    console.log(`  Méthodes: ${methods.join(', ')}`);
-                }
-            }
-        });
-        
-        // Vérification spéciale pour window.bitcoin
-        if (window.bitcoin) {
-            console.log("Propriétés de window.bitcoin:", Object.keys(window.bitcoin));
-        }
-    }
-
-    // Fonction pour vérifier périodiquement la disponibilité des extensions
-    function setupPeriodicDetection() {
-        // Vérifier toutes les 3 secondes pendant 15 secondes
-        let attempts = 0;
-        const maxAttempts = 5;
-        
-        const detectInterval = setInterval(() => {
-            attempts++;
-            console.log(`Tentative périodique de détection #${attempts}...`);
-            
-            // Mettre à jour la disponibilité
-            updateWalletAvailability();
-            refreshWalletOptions();
-            
-            // Arrêter après le nombre maximum de tentatives
-            if (attempts >= maxAttempts) {
-                clearInterval(detectInterval);
-                console.log("Fin des tentatives de détection périodiques.");
-            }
-        }, 3000);
-    }
-
-    // Ajouter un style CSS pour les options d'installation
-    const style = document.createElement('style');
-    style.textContent = `
-        .wallet-option-install {
-            opacity: 0.7;
-            background-color: #2a2a3a !important;
-        }
-        .wallet-option-install:hover {
-            opacity: 1;
-        }
-    `;
-    document.head.appendChild(style);
-
     // Initialisation
-    initWalletModal();
     initEventListeners();
-    debugExtensionObjects();
-    
-    // Démarrer la détection périodique
-    setupPeriodicDetection();
-
     console.log('Script de connexion de portefeuille initialisé');
 });
