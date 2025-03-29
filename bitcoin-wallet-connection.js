@@ -22,14 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     { path: 'window.XverseProviders?.BitcoinProvider', found: false },
                     { path: 'window.XverseProvider', found: false },
                     { path: 'window.bitcoinProvider', found: false },
-                    { path: 'window.bitcoin?.xverse', found: false }
+                    { path: 'window.bitcoin?.xverse', found: false },
+                    { path: 'window.__XVERSE__', found: false }
                 ],
-                // Ces variables seront vérifiées lorsque l'utilisateur clique sur l'option
                 dynamic: [
                     'window.__XVERSE__',
-                    'window.XverseProviders',
+                    'window.XverseProviders?.BitcoinProvider',
                     'window.XverseProvider',
-                    'window.bitcoinProvider'
+                    'window.bitcoinProvider',
+                    'window.bitcoin?.xverse'
                 ]
             },
             connect: async () => {
@@ -54,6 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else if (window.bitcoin?.xverse) {
                             const accounts = await window.bitcoin.xverse.request({ method: 'getAccounts' });
                             return accounts[0];
+                        } else if (window.__XVERSE__) {
+                            // Essayer de la méthode avec __XVERSE__
+                            if (window.__XVERSE__.bitcoin) {
+                                const accounts = await window.__XVERSE__.bitcoin.request({ method: 'getAccounts' });
+                                return accounts[0];
+                            }
                         }
                     }
                     
@@ -124,12 +131,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 checks: [
                     { path: 'window.magicEden', found: false },
                     { path: 'window.magicEdenWallet', found: false },
-                    { path: 'window.bitcoin?.magicEden', found: false }
+                    { path: 'window.bitcoin?.magicEden', found: false },
+                    { path: 'window.magiceden', found: false }, // Vérifier variante en minuscules
+                    { path: 'window.ordinalswallet', found: false } // Ancien nom pour Magic Eden
                 ],
                 dynamic: [
                     'window.magicEden',
                     'window.magicEdenWallet',
-                    'window.bitcoin?.magicEden'
+                    'window.bitcoin?.magicEden',
+                    'window.magiceden',
+                    'window.ordinalswallet'
                 ]
             },
             connect: async () => {
@@ -148,6 +159,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             return accounts[0];
                         } else if (window.bitcoin?.magicEden) {
                             const accounts = await window.bitcoin.magicEden.request({ method: 'getAccounts' });
+                            return accounts[0];
+                        } else if (window.magiceden) {
+                            // Variante en minuscules
+                            const accounts = await window.magiceden.request({ method: 'getAccounts' });
+                            return accounts[0];
+                        } else if (window.ordinalswallet) {
+                            // Ancien nom pour Magic Eden
+                            const accounts = await window.ordinalswallet.request({ method: 'getAccounts' });
                             return accounts[0];
                         }
                     }
@@ -182,13 +201,19 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             connect: async () => {
                 try {
-                    // OKX est déjà détecté correctement, procéder à la connexion
-                    if (window.okxwallet?.bitcoin) {
-                        const accounts = await window.okxwallet.bitcoin.requestAccounts();
-                        return accounts[0];
-                    } else if (window.bitcoin?.okx) {
-                        const accounts = await window.bitcoin.okx.requestAccounts();
-                        return accounts[0];
+                    // Vérifier dynamiquement si OKX est détecté maintenant
+                    const dynamicDetection = runDynamicDetection(wallets[3].detection.dynamic);
+                    
+                    if (dynamicDetection) {
+                        console.log("OKX détecté dynamiquement:", dynamicDetection);
+                        
+                        if (window.okxwallet?.bitcoin) {
+                            const accounts = await window.okxwallet.bitcoin.requestAccounts();
+                            return accounts[0];
+                        } else if (window.bitcoin?.okx) {
+                            const accounts = await window.bitcoin.okx.requestAccounts();
+                            return accounts[0];
+                        }
                     }
                     
                     // Si non détecté, proposer l'installation
@@ -213,13 +238,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 checks: [
                     { path: 'window.leather', found: false },
                     { path: 'window.leatherProvider', found: false },
+                    { path: 'window.StacksProvider', found: false },
                     // Exclure window.stacks si isOKXWallet est true
                     { path: 'window.stacks && !window.stacks.isOKXWallet', found: false }
                 ],
                 dynamic: [
                     'window.leather',
                     'window.leatherProvider',
-                    'window.StacksProvider'
+                    'window.StacksProvider',
+                    'window.stacks && !window.stacks.isOKXWallet'
                 ]
             },
             connect: async () => {
@@ -240,6 +267,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (window.leatherProvider) {
                             if (window.leatherProvider.request) {
                                 const accounts = await window.leatherProvider.request({ method: 'getAccounts' });
+                                return accounts[0];
+                            }
+                        }
+                        
+                        if (window.StacksProvider) {
+                            if (window.StacksProvider.request) {
+                                const accounts = await window.StacksProvider.request({ method: 'getAccounts' });
                                 return accounts[0];
                             }
                         }
@@ -280,6 +314,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fonction pour évaluer en toute sécurité les chemins d'accès aux objets
     function safeEval(path) {
         try {
+            // Cas spécial pour les opérateurs logiques (comme "&&")
+            if (path.includes('&&')) {
+                const parts = path.split('&&').map(p => p.trim());
+                // Vérifier séquentiellement chaque partie
+                for (const part of parts) {
+                    if (!safeEval(part)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            
             // Parcourir le chemin en séparant par les points
             const parts = path.split('.');
             let current = window;
@@ -302,6 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             return current;
         } catch (e) {
+            console.warn(`Erreur lors de l'évaluation de ${path}:`, e);
             return undefined;
         }
     }
@@ -323,16 +370,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
     }
 
-    // Fonction pour ouvrir le site web du portefeuille
-    function openWalletWebsite(walletName, url) {
-        const confirmed = confirm(`${walletName} n'est pas disponible ou nécessite une configuration. Souhaitez-vous visiter le site de ${walletName}?`);
-        if (confirmed) {
-            window.open(url, '_blank');
-        }
-    }
-
     // Mettre à jour la disponibilité des portefeuilles
     function updateWalletAvailability() {
+        console.log("Mise à jour de la disponibilité des portefeuilles...");
+        
         // Vérifier chaque portefeuille
         wallets.forEach(wallet => {
             wallet.available = false;
@@ -409,7 +450,34 @@ document.addEventListener('DOMContentLoaded', () => {
             // Mettre à jour la disponibilité à chaque ouverture
             // afin de détecter les extensions activées entre-temps
             initWalletModal();
+            
+            // Réessayer la détection après un court délai
+            // (certaines extensions peuvent ne pas être immédiatement disponibles)
+            setTimeout(() => {
+                updateWalletAvailability();
+                refreshWalletOptions();
+            }, 1000);
         }
+    }
+    
+    // Rafraîchir les options de portefeuille sans recréer tous les éléments
+    function refreshWalletOptions() {
+        if (!walletOptionsContainer) return;
+        
+        const options = walletOptionsContainer.querySelectorAll('.wallet-option');
+        options.forEach((option, index) => {
+            const walletIndex = option.getAttribute('data-wallet');
+            const wallet = wallets[walletIndex];
+            
+            // Mettre à jour la classe et le texte en fonction de la disponibilité
+            if (wallet.available) {
+                option.classList.remove('wallet-option-install');
+                option.querySelector('.wallet-option-name').textContent = wallet.name;
+            } else {
+                option.classList.add('wallet-option-install');
+                option.querySelector('.wallet-option-name').textContent = `${wallet.name} (Installation)`;
+            }
+        });
     }
 
     // Fermer la modal de portefeuille
@@ -446,14 +514,18 @@ document.addEventListener('DOMContentLoaded', () => {
             'window.XverseProviders',
             'window.XverseProvider',
             'window.bitcoinProvider',
+            'window.__XVERSE__',
             'window.unisat',
             'window.magicEden',
             'window.magicEdenWallet',
+            'window.magiceden',
+            'window.ordinalswallet',
             'window.okxwallet',
             'window.bitcoin',
             'window.stacks',
             'window.leather',
-            'window.leatherProvider'
+            'window.leatherProvider',
+            'window.StacksProvider'
         ];
         
         console.log("Débogage des objets d'extension:");
@@ -481,6 +553,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Fonction pour vérifier périodiquement la disponibilité des extensions
+    function setupPeriodicDetection() {
+        // Vérifier toutes les 3 secondes pendant 15 secondes
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        const detectInterval = setInterval(() => {
+            attempts++;
+            console.log(`Tentative périodique de détection #${attempts}...`);
+            
+            // Mettre à jour la disponibilité
+            updateWalletAvailability();
+            refreshWalletOptions();
+            
+            // Arrêter après le nombre maximum de tentatives
+            if (attempts >= maxAttempts) {
+                clearInterval(detectInterval);
+                console.log("Fin des tentatives de détection périodiques.");
+            }
+        }, 3000);
+    }
+
     // Ajouter un style CSS pour les options d'installation
     const style = document.createElement('style');
     style.textContent = `
@@ -498,6 +592,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initWalletModal();
     initEventListeners();
     debugExtensionObjects();
+    
+    // Démarrer la détection périodique
+    setupPeriodicDetection();
 
     console.log('Script de connexion de portefeuille initialisé');
 });
