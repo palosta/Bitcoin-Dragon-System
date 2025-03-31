@@ -1,332 +1,395 @@
 // bitcoin-wallet-connection.js
+// Code pour la connexion au wallet Bitcoin via différentes méthodes
 
+// Options de connexion disponibles
+const walletOptions = {
+  unisat: { name: 'Unisat', installed: false },
+  xverse: { name: 'Xverse', installed: false },
+  leather: { name: 'Leather', installed: false },
+  magiceden: { name: 'Magic Eden', installed: false },
+  okx: { name: 'OKX', installed: false }
+};
+
+// Classe principale de gestion du wallet
+class BitcoinWalletConnector {
+  constructor() {
+    this.connected = false;
+    this.walletAddress = null;
+    this.walletProvider = null;
+    this.checkWalletInstallations();
+  }
+
+  // Vérifier quels wallets sont installés
+  checkWalletInstallations() {
+    // Vérification Unisat
+    if (typeof window.unisat !== 'undefined') {
+      walletOptions.unisat.installed = true;
+    }
+    
+    // Vérification Xverse
+    if (typeof window.xverse !== 'undefined') {
+      walletOptions.xverse.installed = true;
+    }
+    
+    // Vérification Leather (anciennement Nami)
+    if (typeof window.leather !== 'undefined') {
+      walletOptions.leather.installed = true;
+    }
+    
+    // Vérification Magic Eden
+    if (typeof window.magicEden !== 'undefined') {
+      walletOptions.magiceden.installed = true;
+    }
+    
+    // Vérification OKX Wallet
+    if (typeof window.okxwallet !== 'undefined') {
+      walletOptions.okx.installed = true;
+    }
+    
+    this.updateWalletUI();
+  }
+
+  // Mise à jour de l'interface utilisateur pour afficher les options de wallet
+  updateWalletUI() {
+    const walletContainer = document.getElementById('wallet-options');
+    if (!walletContainer) return;
+    
+    walletContainer.innerHTML = '';
+    
+    Object.keys(walletOptions).forEach(key => {
+      const wallet = walletOptions[key];
+      if (wallet.installed) {
+        const button = document.createElement('button');
+        button.className = 'wallet-button';
+        button.innerText = `Connecter ${wallet.name}`;
+        button.onclick = () => this.connectWallet(key);
+        walletContainer.appendChild(button);
+      } else {
+        const link = document.createElement('a');
+        link.className = 'wallet-link';
+        link.innerText = `Installer ${wallet.name}`;
+        
+        // Définir les URLs d'installation appropriées
+        if (key === 'unisat') {
+          link.href = 'https://unisat.io/download';
+        } else if (key === 'xverse') {
+          link.href = 'https://www.xverse.app/download';
+        } else if (key === 'leather') {
+          link.href = 'https://leather.io/download';
+        } else if (key === 'magiceden') {
+          link.href = 'https://wallet.magiceden.io/download';
+        } else if (key === 'okx') {
+          link.href = 'https://www.okx.com/web3/wallet/download';
+        }
+        
+        link.target = '_blank';
+        walletContainer.appendChild(link);
+      }
+    });
+  }
+
+  // Connexion au wallet sélectionné
+  async connectWallet(walletType) {
+    try {
+      switch (walletType) {
+        case 'unisat':
+          await this.connectUnisat();
+          break;
+        case 'xverse':
+          await this.connectXverse();
+          break;
+        case 'leather':
+          await this.connectLeather();
+          break;
+        case 'magiceden':
+          await this.connectMagicEden();
+          break;
+        case 'okx':
+          await this.connectOKX();
+          break;
+        default:
+          throw new Error('Type de wallet non supporté');
+      }
+      
+      // Sauvegarder la préférence de wallet
+      localStorage.setItem('preferredWallet', walletType);
+      
+      this.updateConnectedState();
+    } catch (error) {
+      console.error('Erreur de connexion:', error);
+      this.showError(`Erreur de connexion: ${error.message}`);
+    }
+  }
+
+  // Connexion spécifique à Unisat
+  async connectUnisat() {
+    if (!walletOptions.unisat.installed) {
+      this.showError('Unisat wallet n\'est pas installé');
+      return;
+    }
+    
+    try {
+      const accounts = await window.unisat.requestAccounts();
+      this.walletAddress = accounts[0];
+      this.walletProvider = 'unisat';
+      this.connected = true;
+    } catch (error) {
+      throw new Error(`Unisat: ${error.message}`);
+    }
+  }
+
+  // Connexion spécifique à Xverse
+  async connectXverse() {
+    if (!walletOptions.xverse.installed) {
+      this.showError('Xverse wallet n\'est pas installé');
+      return;
+    }
+    
+    try {
+      const accounts = await window.xverse.bitcoin.connect();
+      this.walletAddress = accounts.addresses[0].address;
+      this.walletProvider = 'xverse';
+      this.connected = true;
+    } catch (error) {
+      throw new Error(`Xverse: ${error.message}`);
+    }
+  }
+
+  // Connexion spécifique à Leather
+  async connectLeather() {
+    if (!walletOptions.leather.installed) {
+      this.showError('Leather wallet n\'est pas installé');
+      return;
+    }
+    
+    try {
+      const accounts = await window.leather.enable();
+      this.walletAddress = accounts[0];
+      this.walletProvider = 'leather';
+      this.connected = true;
+    } catch (error) {
+      throw new Error(`Leather: ${error.message}`);
+    }
+  }
+  
+  // Connexion spécifique à Magic Eden
+  async connectMagicEden() {
+    if (!walletOptions.magiceden.installed) {
+      this.showError('Magic Eden wallet n\'est pas installé');
+      return;
+    }
+    
+    try {
+      // Spécifique à l'API Magic Eden
+      const accounts = await window.magicEden.bitcoin.connect();
+      this.walletAddress = accounts.address || accounts[0];
+      this.walletProvider = 'magiceden';
+      this.connected = true;
+    } catch (error) {
+      throw new Error(`Magic Eden: ${error.message}`);
+    }
+  }
+  
+  // Connexion spécifique à OKX
+  async connectOKX() {
+    if (!walletOptions.okx.installed) {
+      this.showError('OKX wallet n\'est pas installé');
+      return;
+    }
+    
+    try {
+      // Spécifique à l'API OKX Wallet
+      const accounts = await window.okxwallet.bitcoin.connect();
+      this.walletAddress = accounts.address || accounts[0];
+      this.walletProvider = 'okx';
+      this.connected = true;
+    } catch (error) {
+      throw new Error(`OKX: ${error.message}`);
+    }
+  }
+
+  // Déconnexion du wallet
+  disconnectWallet() {
+    this.connected = false;
+    this.walletAddress = null;
+    this.walletProvider = null;
+    this.updateConnectedState();
+    localStorage.removeItem('preferredWallet');
+  }
+
+  // Mettre à jour l'interface après connexion/déconnexion
+  updateConnectedState() {
+    const connectionStatus = document.getElementById('connection-status');
+    const walletAddress = document.getElementById('wallet-address');
+    const connectButton = document.getElementById('connect-button');
+    const disconnectButton = document.getElementById('disconnect-button');
+    const walletContainer = document.getElementById('wallet-options');
+    
+    if (this.connected) {
+      if (connectionStatus) connectionStatus.innerHTML = `<span class="connected">Connecté via ${walletOptions[this.walletProvider].name}</span>`;
+      if (walletAddress) walletAddress.textContent = this.formatAddress(this.walletAddress);
+      if (connectButton) connectButton.style.display = 'none';
+      if (disconnectButton) disconnectButton.style.display = 'block';
+      if (walletContainer) walletContainer.style.display = 'none';
+      
+      // Déclencher l'événement de connexion
+      document.dispatchEvent(new CustomEvent('walletConnected', {
+        detail: {
+          address: this.walletAddress,
+          provider: this.walletProvider
+        }
+      }));
+      
+      // Charger les ordinals après connexion
+      this.loadUserOrdinals();
+    } else {
+      if (connectionStatus) connectionStatus.innerHTML = '<span class="disconnected">Non connecté</span>';
+      if (walletAddress) walletAddress.textContent = '';
+      if (connectButton) connectButton.style.display = 'block';
+      if (disconnectButton) disconnectButton.style.display = 'none';
+      if (walletContainer) walletContainer.style.display = 'block';
+      
+      // Déclencher l'événement de déconnexion
+      document.dispatchEvent(new CustomEvent('walletDisconnected'));
+    }
+  }
+
+  // Formater l'adresse pour l'affichage (abréger le milieu)
+  formatAddress(address) {
+    if (!address) return '';
+    return address.slice(0, 6) + '...' + address.slice(-6);
+  }
+
+  // Charger les ordinals de l'utilisateur connecté
+  async loadUserOrdinals() {
+    if (!this.connected || !this.walletAddress) return;
+    
+    // Déclencher un événement pour notifier que le chargement des ordinals a commencé
+    document.dispatchEvent(new CustomEvent('ordinalsLoading'));
+    
+    try {
+      let ordinals = [];
+      
+      // Logique dépendante du provider
+      switch (this.walletProvider) {
+        case 'unisat':
+          const unisatOrdinals = await window.unisat.getOrdinals();
+          ordinals = unisatOrdinals;
+          break;
+          
+        case 'xverse':
+          // Implémentation spécifique à Xverse
+          // Remarque: Adapter selon l'API Xverse actuelle
+          break;
+          
+        case 'leather':
+          // Implémentation spécifique à Leather
+          // Remarque: Adapter selon l'API Leather actuelle
+          break;
+          
+        case 'magiceden':
+          // Implémentation spécifique à Magic Eden
+          try {
+            const magicEdenOrdinals = await window.magicEden.bitcoin.getOrdinals();
+            ordinals = magicEdenOrdinals;
+          } catch (error) {
+            console.error('Erreur lors du chargement des ordinals Magic Eden:', error);
+          }
+          break;
+          
+        case 'okx':
+          // Implémentation spécifique à OKX
+          try {
+            const okxOrdinals = await window.okxwallet.bitcoin.getInscriptions();
+            ordinals = okxOrdinals;
+          } catch (error) {
+            console.error('Erreur lors du chargement des ordinals OKX:', error);
+          }
+          break;
+      }
+      
+      // Filtrer pour ne garder que les ordinals de la collection Bitcoin Dragon System
+      // Note: Ceci est un exemple. Vous devrez adapter en fonction de vos identifiants de collection.
+      const bitcoinDragonOrdinals = ordinals.filter(ordinal => 
+        ordinal.content?.includes('Bitcoin Dragon System') || 
+        ordinal.meta?.name?.includes('Bitcoin Dragon')
+      );
+      
+      // Déclencher un événement avec les ordinals chargés
+      document.dispatchEvent(new CustomEvent('ordinalsLoaded', {
+        detail: {
+          ordinals: bitcoinDragonOrdinals
+        }
+      }));
+    } catch (error) {
+      console.error('Erreur lors du chargement des ordinals:', error);
+      this.showError(`Erreur lors du chargement des ordinals: ${error.message}`);
+      
+      // Déclencher un événement d'erreur
+      document.dispatchEvent(new CustomEvent('ordinalsError', {
+        detail: {
+          error: error.message
+        }
+      }));
+    }
+  }
+
+  // Afficher une erreur à l'utilisateur
+  showError(message) {
+    const errorContainer = document.getElementById('error-message');
+    if (errorContainer) {
+      errorContainer.textContent = message;
+      errorContainer.style.display = 'block';
+      
+      // Cacher le message d'erreur après 5 secondes
+      setTimeout(() => {
+        errorContainer.style.display = 'none';
+      }, 5000);
+    } else {
+      // Fallback si le conteneur d'erreur n'existe pas
+      alert(message);
+    }
+  }
+
+  // Essayer de se reconnecter avec le wallet précédemment utilisé
+  async tryReconnect() {
+    const preferredWallet = localStorage.getItem('preferredWallet');
+    if (preferredWallet) {
+      try {
+        await this.connectWallet(preferredWallet);
+      } catch (error) {
+        console.error('Reconnexion automatique échouée:', error);
+        // Ne pas afficher d'erreur pour ne pas perturber l'utilisateur
+      }
+    }
+  }
+}
+
+// Initialiser la connexion wallet
+const walletConnector = new BitcoinWalletConnector();
+
+// Essayer de se reconnecter au démarrage
 document.addEventListener('DOMContentLoaded', () => {
-    // Fonction pour charger la bibliothèque Sats Connect dynamiquement
-    function loadSatsConnect() {
-        return new Promise((resolve, reject) => {
-            // Vérifier si Sats Connect est déjà chargé
-            if (window.SatsConnect) {
-                resolve(window.SatsConnect);
-                return;
-            }
-
-            // Créer un élément script pour charger Sats Connect
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/sats-connect@3.0.0/dist/umd/index.js';
-            script.async = true;
-            script.onload = () => {
-                if (window.SatsConnect) {
-                    resolve(window.SatsConnect);
-                } else {
-                    reject(new Error('Sats Connect not loaded correctly'));
-                }
-            };
-            script.onerror = () => reject(new Error('Failed to load Sats Connect'));
-            document.head.appendChild(script);
-        });
-    }
-
-    const connectButton = document.getElementById('connect-wallet-btn');
-    const walletAddressDisplay = document.getElementById('wallet-address');
-    const walletModal = document.getElementById('wallet-modal');
-    const closeModalButton = document.querySelector('.close-modal');
-    const walletOptionsContainer = document.querySelector('.wallet-options');
-
-    if (!connectButton) {
-        console.error('Bouton de connexion non trouvé');
-        return;
-    }
-
-    // Configuration des portefeuilles
-    const wallets = [
-        { 
-            name: 'Xverse',
-            icon: "assets/xverse.png",
-            available: false,
-            connect: async () => {
-                try {
-                    const SatsConnect = await loadSatsConnect();
-                    const { request } = SatsConnect;
-                    
-                    // Utiliser la méthode wallet_connect pour se connecter
-                    const response = await request('wallet_connect', {
-                        addresses: ['ordinals', 'payment', 'stacks'],
-                        message: 'Connect to Bitcoin Dragon System'
-                    });
-                    
-                    if (response.status === 'success') {
-                        const paymentAddress = response.result.addresses.find(
-                            addr => addr.purpose === 'payment'
-                        );
-                        return paymentAddress?.address;
-                    }
-                    return null;
-                } catch (error) {
-                    console.error('Xverse connection error:', error);
-                    return null;
-                }
-            }
-        },
-        { 
-            name: 'Unisat',
-            icon: "assets/unisat.png",
-            available: false,
-            connect: async () => {
-                try {
-                    // Vérifier si l'API Unisat est disponible
-                    if (window.unisat) {
-                        const accounts = await window.unisat.requestAccounts();
-                        return accounts[0];
-                    }
-                    
-                    // Utiliser Sats Connect comme fallback
-                    const SatsConnect = await loadSatsConnect();
-                    const { Wallet } = SatsConnect;
-                    
-                    const data = await Wallet.request('getAccounts', {
-                        network: {
-                            type: 'Mainnet'
-                        },
-                        message: 'Connect to Bitcoin Dragon System',
-                        paymentAddress: true,
-                        ordinalAddress: true
-                    });
-                    
-                    return data.paymentAddress || data.address;
-                } catch (error) {
-                    console.error('Unisat connection error:', error);
-                    return null;
-                }
-            }
-        },
-        { 
-            name: 'Magic Eden',
-            icon: "assets/magic-eden.png",
-            available: false,
-            connect: async () => {
-                try {
-                    const SatsConnect = await loadSatsConnect();
-                    const { Wallet } = SatsConnect;
-                    
-                    const data = await Wallet.request('getAccounts', {
-                        network: {
-                            type: 'Mainnet'
-                        },
-                        message: 'Connect to Bitcoin Dragon System',
-                        paymentAddress: true,
-                        ordinalAddress: true
-                    });
-                    
-                    return data.paymentAddress || data.address;
-                } catch (error) {
-                    console.error('Magic Eden connection error:', error);
-                    return null;
-                }
-            }
-        },
-        { 
-            name: 'OKX',
-            icon: "assets/okx.png",
-            available: false,
-            connect: async () => {
-                try {
-                    // Vérifier si OKX Wallet est disponible
-                    if (window.okxwallet?.bitcoin) {
-                        const accounts = await window.okxwallet.bitcoin.requestAccounts();
-                        return accounts[0];
-                    }
-                    
-                    // Utiliser Sats Connect comme fallback
-                    const SatsConnect = await loadSatsConnect();
-                    const { Wallet } = SatsConnect;
-                    
-                    const data = await Wallet.request('getAccounts', {
-                        network: {
-                            type: 'Mainnet'
-                        },
-                        message: 'Connect to Bitcoin Dragon System',
-                        paymentAddress: true,
-                        ordinalAddress: true
-                    });
-                    
-                    return data.paymentAddress || data.address;
-                } catch (error) {
-                    console.error('OKX connection error:', error);
-                    return null;
-                }
-            }
-        },
-        { 
-            name: 'Leather',
-            icon: "assets/leather.png",
-            available: false,
-            connect: async () => {
-                try {
-                    const SatsConnect = await loadSatsConnect();
-                    const { Wallet } = SatsConnect;
-                    
-                    const data = await Wallet.request('getAccounts', {
-                        network: {
-                            type: 'Mainnet'
-                        },
-                        message: 'Connect to Bitcoin Dragon System',
-                        paymentAddress: true,
-                        ordinalAddress: true
-                    });
-                    
-                    return data.paymentAddress || data.address;
-                } catch (error) {
-                    console.error('Leather connection error:', error);
-                    return null;
-                }
-            }
-        }
-    ];
-
-    // Raccourcir l'adresse
-    function shortenAddress(address) {
-        if (!address) return "";
-        return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-    }
-
-    // Vérifier la disponibilité des portefeuilles
-    async function checkWalletAvailability() {
-        try {
-            // Charger Sats Connect
-            await loadSatsConnect();
-            
-            // Obtenir la liste des portefeuilles disponibles
-            const { getProviders } = window.SatsConnect;
-            const availableProviders = await getProviders();
-            
-            // Mettre à jour la disponibilité des portefeuilles
-            wallets.forEach(wallet => {
-                const provider = availableProviders.find(p => 
-                    p.name.toLowerCase().includes(wallet.name.toLowerCase())
-                );
-                wallet.available = !!provider;
-            });
-            
-            // Vérifier également les API directes
-            if (window.unisat) {
-                wallets.find(w => w.name === 'Unisat').available = true;
-            }
-            
-            if (window.okxwallet?.bitcoin) {
-                wallets.find(w => w.name === 'OKX').available = true;
-            }
-            
-            console.log('Wallet availability updated:', wallets.map(w => `${w.name}: ${w.available}`).join(', '));
-        } catch (error) {
-            console.error('Error checking wallet availability:', error);
-        }
-    }
-
-    // Initialiser la modal avec les options de portefeuille
-    function initWalletModal() {
-        if (!walletOptionsContainer) return;
-        
-        // Vider le conteneur
-        walletOptionsContainer.innerHTML = '';
-        
-        // Ajouter chaque option de portefeuille
-        wallets.forEach((wallet, index) => {
-            const optionElement = document.createElement('div');
-            optionElement.className = wallet.available ? 'wallet-option' : 'wallet-option wallet-option-install';
-            optionElement.setAttribute('data-wallet', index);
-            optionElement.innerHTML = `
-                <span class="wallet-option-name">${wallet.name} ${!wallet.available ? '(Installation)' : ''}</span>
-                <img src="${wallet.icon}" alt="${wallet.name}" class="wallet-option-icon" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 fill=%22%23ddd%22/><text x=%2212%22 y=%2216%22 font-size=%2212%22 text-anchor=%22middle%22 fill=%22%23333%22>${wallet.name[0]}</text></svg>';">
-            `;
-            walletOptionsContainer.appendChild(optionElement);
-        });
-        
-        // Ajouter les écouteurs d'événements
-        walletOptionsContainer.querySelectorAll('.wallet-option').forEach(option => {
-            option.addEventListener('click', async () => {
-                const walletIndex = option.getAttribute('data-wallet');
-                const wallet = wallets[walletIndex];
-                
-                if (!wallet.available) {
-                    // Diriger vers le site d'installation du portefeuille
-                    const walletUrls = {
-                        'Xverse': 'https://www.xverse.app/download',
-                        'Unisat': 'https://unisat.io/download',
-                        'Magic Eden': 'https://wallet.magiceden.io/download',
-                        'OKX': 'https://www.okx.com/web3/wallet/download',
-                        'Leather': 'https://leather.io/install-extension'
-                    };
-                    
-                    window.open(walletUrls[wallet.name], '_blank');
-                    return;
-                }
-                
-                console.log(`Tentative de connexion à ${wallet.name}...`);
-                
-                try {
-                    const address = await wallet.connect();
-                    if (address) {
-                        if (walletAddressDisplay) {
-                            walletAddressDisplay.textContent = `Connecté avec ${wallet.name}: ${shortenAddress(address)}`;
-                        }
-                        connectButton.textContent = 'Connecté';
-                        connectButton.classList.add('connected');
-                        closeWalletModal();
-                    } else {
-                        alert(`Échec de la connexion à ${wallet.name}. Vérifiez que l'extension est correctement installée.`);
-                    }
-                } catch (error) {
-                    console.error(`Erreur de connexion à ${wallet.name}:`, error);
-                    alert(`Une erreur est survenue lors de la connexion à ${wallet.name}.`);
-                }
-            });
-        });
-    }
-
-    // Ouvrir la modal de portefeuille
-    function openWalletModal() {
-        if (walletModal) {
-            walletModal.style.display = 'flex';
-        }
-    }
-
-    // Fermer la modal de portefeuille
-    function closeWalletModal() {
-        if (walletModal) {
-            walletModal.style.display = 'none';
-        }
-    }
-
-    // Initialisation des écouteurs d'événements
-    function initEventListeners() {
-        // Ouvrir la modal au clic sur le bouton de connexion
-        connectButton.addEventListener('click', async () => {
-            // Vérifier la disponibilité des portefeuilles avant d'ouvrir la modal
-            await checkWalletAvailability();
-            
-            // Initialiser la modal avec les portefeuilles disponibles
-            initWalletModal();
-            
-            // Ouvrir la modal
-            openWalletModal();
-        });
-        
-        // Fermer la modal au clic sur le bouton de fermeture
-        if (closeModalButton) {
-            closeModalButton.addEventListener('click', closeWalletModal);
-        }
-        
-        // Fermer la modal au clic à l'extérieur
-        if (walletModal) {
-            walletModal.addEventListener('click', (event) => {
-                if (event.target === walletModal) {
-                    closeWalletModal();
-                }
-            });
-        }
-    }
-
-    // Initialisation
-    initEventListeners();
-    console.log('Script de connexion de portefeuille initialisé');
+  walletConnector.tryReconnect();
+  
+  // Attacher les événements aux boutons existants
+  const connectButton = document.getElementById('connect-button');
+  if (connectButton) {
+    connectButton.addEventListener('click', () => {
+      const walletOptions = document.getElementById('wallet-options');
+      if (walletOptions) {
+        walletOptions.style.display = walletOptions.style.display === 'none' ? 'block' : 'none';
+      }
+    });
+  }
+  
+  const disconnectButton = document.getElementById('disconnect-button');
+  if (disconnectButton) {
+    disconnectButton.addEventListener('click', () => {
+      walletConnector.disconnectWallet();
+    });
+  }
 });
+
+// Exporter la classe pour l'utiliser dans d'autres modules
+export default walletConnector;

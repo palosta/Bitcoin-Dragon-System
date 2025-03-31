@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <link rel="icon" href="favicon.png" type="image/png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bitcoin Dragon System</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Open Graph pour WhatsApp, Facebook -->
+    <!-- Open Graph for WhatsApp, Facebook -->
     <meta property="og:title" content="Bitcoin Dragon System">
     <meta property="og:description" content="Dragons on Bitcoin">
     <meta property="og:image" content="https://raw.githubusercontent.com/palosta/Bitcoin-Dragon-System/main/btcdragonlogo.png">
@@ -17,28 +17,245 @@
     <meta name="twitter:title" content="Bitcoin Dragon System">
     <meta name="twitter:description" content="Dragons on Bitcoin">
     <meta name="twitter:image" content="https://raw.githubusercontent.com/palosta/Bitcoin-Dragon-System/main/btcdragonlogo.png">
-    
 </head>
 <body>
-    <div class="container">
-        <img src="coming.png" alt="coming soon">
-        <button id="connect-wallet-btn" class="wallet-connect-btn">Connect Wallet</button>
-        <p id="wallet-address"></p>
-        <p id="verification-result"></p>
-    </div>
+    <header class="site-header">
+        <div class="logo-container">
+            <img src="btcdragonlogo.png" alt="Bitcoin Dragon System Logo" class="logo">
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="#home" class="active">Home</a></li>
+                <li><a href="#dashboard">Dashboard</a></li>
+                <li><a href="#staking">Staking</a></li>
+                <li><a href="#shop">Shop</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+        </nav>
+        <div class="wallet-section">
+            <!-- Connection status display -->
+            <div id="connection-status" class="status-indicator">
+                <span class="disconnected">Not connected</span>
+            </div>
+            
+            <!-- Wallet connect button -->
+            <button id="connect-button" class="wallet-connect-btn">Connect Wallet</button>
+            
+            <!-- Disconnect button (hidden by default) -->
+            <button id="disconnect-button" class="wallet-disconnect-btn" style="display: none;">Disconnect</button>
+            
+            <!-- Wallet address display -->
+            <div id="wallet-address" class="wallet-address"></div>
+        </div>
+    </header>
 
-    <!-- Modal de connexion de portefeuille -->
-    <div id="wallet-modal" class="wallet-modal">
-        <div class="wallet-modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Connect Wallet</h2>
-            <div class="wallet-options">
-                <!-- Les options de portefeuille seront ajoutées ici par JavaScript -->
+    <main>
+        <!-- Home section -->
+        <section id="home" class="active-section">
+            <div class="hero-container">
+                <img src="coming.png" alt="coming soon" class="hero-image">
+                <div class="hero-content">
+                    <h1>Welcome to Bitcoin Dragon System</h1>
+                    <p>Join our community of ordinals collectors</p>
+                    <button id="explore-dashboard-btn" class="primary-btn">Explore My Dashboard</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="dashboard-section">
+            <h2>Your Bitcoin Dragon Dashboard</h2>
+            
+            <!-- Error message for connections -->
+            <div id="error-message" class="error-message" style="display: none;"></div>
+            
+            <!-- Account overview -->
+            <div class="account-overview">
+                <div class="account-card">
+                    <h3>Your Stats</h3>
+                    <div class="stats-container">
+                        <div class="stat-item">
+                            <span class="stat-label">Dragons owned:</span>
+                            <span id="dragons-owned" class="stat-value">--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Dragons staked:</span>
+                            <span id="dragons-staked" class="stat-value">--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Runes earned:</span>
+                            <span id="runes-earned" class="stat-value">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Container for wallet options -->
+            <div id="wallet-options" class="wallet-options-container" style="display: none;"></div>
+            
+            <!-- Ordinals display section -->
+            <div class="ordinals-section">
+                <h3>Your Bitcoin Dragons</h3>
+                
+                <!-- Loading indicator -->
+                <div id="ordinals-loading" class="loading-indicator">
+                    <div class="spinner"></div>
+                    <p>Loading your Dragons...</p>
+                </div>
+                
+                <!-- Empty state - no ordinals -->
+                <div id="no-ordinals" class="empty-state" style="display: none;">
+                    <h3>No Bitcoin Dragons Found</h3>
+                    <p>You don't own any Dragons from our collection yet.</p>
+                    <a href="#" class="market-link">View Marketplace</a>
+                </div>
+                
+                <!-- Container to display ordinals -->
+                <div id="ordinals-container" class="ordinals-grid"></div>
+            </div>
+        </section>
+
+        <!-- Staking Section -->
+        <section id="staking" class="staking-section">
+            <h2>Dragon Staking</h2>
+            
+            <!-- Staking introduction -->
+            <div class="staking-intro">
+                <p>Stake your Bitcoin Dragons to earn Rune #1280 tokens as rewards.</p>
+                <p>The rarer your Dragon, the more rewards you earn!</p>
+            </div>
+            
+            <!-- Staking dashboard -->
+            <div class="staking-dashboard">
+                <div class="staking-overview">
+                    <h3>Your Staking</h3>
+                    <div class="staking-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Dragons staked:</span>
+                            <span id="staked-count" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Rewards accrued:</span>
+                            <span id="rewards-accrued" class="stat-value">0 RUNE</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Reward rate:</span>
+                            <span id="reward-rate" class="stat-value">0 RUNE/day</span>
+                        </div>
+                    </div>
+                    
+                    <div class="reward-actions">
+                        <button id="claim-rewards" class="action-button" disabled>Claim Rewards</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Staked ordinals list -->
+            <div class="staked-ordinals-section">
+                <h3>Staked Dragons</h3>
+                
+                <!-- Loading indicator -->
+                <div id="staked-loading" class="loading-indicator">
+                    <div class="spinner"></div>
+                    <p>Loading your staked Dragons...</p>
+                </div>
+                
+                <!-- Empty state - no staked ordinals -->
+                <div id="no-staked" class="empty-state">
+                    <h3>No Dragons Staked</h3>
+                    <p>You haven't staked any Dragons yet.</p>
+                    <p>Head to your Dashboard to stake your Dragons.</p>
+                </div>
+                
+                <!-- Container for staked ordinals -->
+                <div id="staked-container" class="staked-grid"></div>
+            </div>
+        </section>
+
+        <!-- Shop Section -->
+        <section id="shop" class="shop-section">
+            <h2>Bitcoin Dragon Shop</h2>
+            <p>Under construction - Coming soon</p>
+            
+            <div class="coming-soon">
+                <img src="coming.png" alt="Shop coming soon" class="coming-soon-img">
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="about-section">
+            <h2>About Bitcoin Dragon System</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p>Bitcoin Dragon System is a unique ordinals collection on Bitcoin.</p>
+                    <p>Our community is built around passionate collectors and offers many exclusive benefits to holders.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <ul>
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#dashboard">Dashboard</a></li>
+                    <li><a href="#staking">Staking</a></li>
+                    <li><a href="#shop">Shop</a></li>
+                    <li><a href="#about">About</a></li>
+                </ul>
+            </div>
+            <div class="footer-social">
+                <a href="https://twitter.com/BTCDragonSystem" target="_blank" class="social-link">Twitter</a>
+                <a href="https://discord.gg/bitcoindragonsystem" target="_blank" class="social-link">Discord</a>
             </div>
         </div>
-    </div>
+        <div class="footer-copyright">
+            <p>&copy; 2025 Bitcoin Dragon System. All rights reserved.</p>
+        </div>
+    </footer>
 
-    <script src="bitcoin-wallet-connection.js"></script>
-
+    <!-- Loading scripts -->
+    <script type="module" src="bitcoin-wallet-connection.js"></script>
+    <script type="module" src="ordinals-display.js"></script>
+    <script type="module" src="staking-system.js"></script>
+    
+    <!-- Navigation script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Navigation between sections
+            const navLinks = document.querySelectorAll('.main-nav a');
+            const sections = document.querySelectorAll('main section');
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all links
+                    navLinks.forEach(navLink => navLink.classList.remove('active'));
+                    
+                    // Add active class to clicked link
+                    this.classList.add('active');
+                    
+                    // Hide all sections
+                    sections.forEach(section => section.classList.remove('active-section'));
+                    
+                    // Show corresponding section
+                    const targetId = this.getAttribute('href').substring(1);
+                    document.getElementById(targetId).classList.add('active-section');
+                });
+            });
+            
+            // Button to go to dashboard
+            const exploreDashboardBtn = document.getElementById('explore-dashboard-btn');
+            if (exploreDashboardBtn) {
+                exploreDashboardBtn.addEventListener('click', function() {
+                    // Simulate click on dashboard link
+                    const dashboardLink = document.querySelector('.main-nav a[href="#dashboard"]');
+                    dashboardLink.click();
+                });
+            }
+        });
+    </script>
 </body>
 </html>
